@@ -1,0 +1,13 @@
+{
+  "name": "meu-jogo",
+  "version": "1.0.0",
+  "description": "Servidor e jogo com WebSocket",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.18.3"
+  }
+}
