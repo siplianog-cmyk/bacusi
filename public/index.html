@@ -373,22 +373,40 @@ body.mobile {
     resetParticles();
     window.addEventListener('resize', resetParticles);
 
-    // JOGO
-    let player, keys, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
+// ... o resto das suas variáveis
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
     let bombs = [];
     let isMobile = false;
 
     // ADICIONADO: Função para detectar celular
-function checkMobile() {
-    isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-        document.body.classList.add('mobile');
-    } else {
-        document.body.classList.remove('mobile');
+    function checkMobile() {
+        isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            document.body.classList.add('mobile');
+        } else {
+            document.body.classList.remove('mobile');
+        }
     }
-}
+
+    function renderMobileHotbar() {
+        const mobileHotbar = document.getElementById('mobile-hotbar');
+        if (!mobileHotbar) return;
+        mobileHotbar.innerHTML = '';
+        hotbarItens.forEach((item, i) => {
+            const qtdRaw = inventory[item.id];
+            let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
+            if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
+            const slot = document.createElement('div');
+            slot.className = 'm-slot';
+            if (hotbarSelecionado === i) slot.classList.add('active');
+            slot.title = item.nome;
+            slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em;position:absolute;bottom:4px;right:4px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
+            slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); renderMobileHotbar(); };
+            mobileHotbar.appendChild(slot);
+        });
+    }
+
 
     function resetGame() {
     checkMobile();  //checa se é mobile
@@ -1311,24 +1329,7 @@ function movePlayer() {
       updateMouseFromTouch(t);
     }, {passive:false});
 
-    
-function renderMobileHotbar() {
-    const mobileHotbar = document.getElementById('mobile-hotbar');
-    if (!mobileHotbar) return;
-    mobileHotbar.innerHTML = '';
-    hotbarItens.forEach((item, i) => {
-        const qtdRaw = inventory[item.id];
-        let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
-        if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
-        const slot = document.createElement('div');
-        slot.className = 'm-slot';
-        if (hotbarSelecionado === i) slot.classList.add('active');
-        slot.title = item.nome;
-        slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em;position:absolute;bottom:4px;right:4px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
-        slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); renderMobileHotbar(); };
-        mobileHotbar.appendChild(slot);
-    });
-}
+
     // ====== MULTIPLAYER (ADICIONADO) ======
 
 // multiplayer
