@@ -228,25 +228,74 @@
     ];
     let hotbarSelecionado = 0;
     
-    socket.on('currentPlayers', (players) => {
-    for (let id in players) {
-        if (id !== socket.id) {
+// Multiplayer
+    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
+    let socket = null;
+    let selfId = null;
+    const otherPlayers = {}; // id -> {x,y,size,espada,...}
+
+    try {
+      socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
+
+      // Eventos do Socket.IO para o cliente
+      socket.on('connect', () => { 
+          selfId = socket.id;
+          console.log('Conectado ao servidor com ID:', selfId);
+          announceSelf(); // Chama a função aqui dentro, após a conexão
+      });
+
+      socket.on('currentPlayers', (players) => {
+        for (let id in players) {
+          if (id !== socket.id) {
             otherPlayers[id] = players[id];
+          }
         }
+      });
+
+      socket.on('newPlayer', (newPlayer) => {
+        otherPlayers[newPlayer.id] = newPlayer;
+      });
+
+      socket.on('playerDisconnected', (playerId) => {
+        delete otherPlayers[playerId];
+      });
+
+      socket.on('playerMoved', (playerData) => {
+        if(otherPlayers[playerData.id]) {
+          otherPlayers[playerData.id].x = playerData.x;
+          otherPlayers[playerData.id].y = playerData.y;
+        }
+      });
+      
+      socket.on('state', payload => {
+        // payload: { id, x, y, size, espada, picareta, superpicareta, armadura }
+        if (!payload || payload.id === selfId) return;
+        otherPlayers[payload.id] = { ...otherPlayers[payload.id], ...payload };
+      });
+      
+      socket.on('leave', id => { delete otherPlayers[id]; });
+
+    } catch (e) {
+      console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
     }
-});
 
-socket.on('newPlayer', (newPlayer) => {
-    otherPlayers[newPlayer.id] = newPlayer;
-});
-
-socket.on('playerDisconnected', (playerId) => {
-    delete otherPlayers[playerId];
-});
-
-socket.on('playerMoved', (playerData) => {
-    otherPlayers[playerData.id] = playerData;
-});
+    // Funções para comunicação com o servidor
+    function announceSelf() {
+      if (!socket || !socket.connected) return;
+      socket.emit('join', { id: selfId });
+    }
+    let lastSend = 0;
+    function throttleSendState() {
+      const now = performance.now();
+      if (!socket || !socket.connected) return;
+      if (now - lastSend < 80) return;
+      lastSend = now;
+      socket.emit('state', {
+        id: selfId,
+        x: player.x, y: player.y, size: player.size,
+        espada: inventory.espada, picareta: inventory.picareta, superpicareta: inventory.superpicareta, armadura: inventory.armadura
+      });
+    }
 
 
     function renderHotbar() {
