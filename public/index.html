@@ -260,9 +260,23 @@
         }
       });
       
-      socket.on('state', payload => {
-        if (!payload || payload.id === selfId) return;
-        otherPlayers[payload.id] = { ...otherPlayers[payload.id], ...payload };
+   socket.on('state', payload => {
+        if (!payload) return;
+        
+        // Limpa a lista para garantir que jogadores que saíram sejam removidos
+        const playerIdsInPayload = new Set(Object.keys(payload));
+        for (const id in otherPlayers) {
+            if (!playerIdsInPayload.has(id)) {
+                delete otherPlayers[id];
+            }
+        }
+        
+        // Adiciona ou atualiza a informação dos jogadores
+        for (const id in payload) {
+            if (id !== selfId) {
+                otherPlayers[id] = payload[id];
+            }
+        }
       });
       
       socket.on('leave', id => { delete otherPlayers[id]; });
