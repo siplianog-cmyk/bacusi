@@ -1260,11 +1260,11 @@ function movePlayer() {
 
     // ====== MULTIPLAYER (ADICIONADO) ======
 
-// Multiplayer
-    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
+// multiplayer
+    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com"; // Troque para a URL do seu servidor.
     let socket = null;
     let selfId = null;
-    const otherPlayers = {}; // id -> {x,y,size,espada,...}
+    const otherPlayers = {};
 
     try {
       socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
@@ -1273,6 +1273,7 @@ function movePlayer() {
       socket.on('connect', () => { 
           selfId = socket.id;
           console.log('Conectado ao servidor com ID:', selfId);
+          announceSelf(); 
       });
 
       socket.on('currentPlayers', (players) => {
@@ -1290,16 +1291,38 @@ function movePlayer() {
       socket.on('playerDisconnected', (playerId) => {
         delete otherPlayers[playerId];
       });
-
-      socket.on('playerMoved', (playerData) => {
-        if(otherPlayers[playerData.id]) {
-          otherPlayers[playerData.id].x = playerData.x;
-          otherPlayers[playerData.id].y = playerData.y;
+      
+      socket.on('state', payload => {
+        if (!payload || !payload[selfId]) return;
+        for (const id in payload) {
+            if (id !== selfId) {
+                otherPlayers[id] = payload[id];
+            }
         }
       });
+      
+      socket.on('leave', id => { delete otherPlayers[id]; });
 
     } catch (e) {
       console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
+    }
+    
+    // Funções para comunicação com o servidor
+    function announceSelf() {
+      if (!socket || !socket.connected) return;
+      socket.emit('join', { id: selfId });
+    }
+    let lastSend = 0;
+    function throttleSendState() {
+      const now = performance.now();
+      if (!socket || !socket.connected) return;
+      if (now - lastSend < 80) return;
+      lastSend = now;
+      socket.emit('state', {
+        id: selfId,
+        x: player.x, y: player.y, size: player.size,
+        espada: inventory.espada, picareta: inventory.picareta, superpicareta: inventory.superpicareta, armadura: inventory.armadura
+      });
     }
 
     // Funções para comunicação com o servidor
