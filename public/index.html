@@ -228,12 +228,7 @@
     ];
     let hotbarSelecionado = 0;
     
-// Multiplayer
-    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
-    let socket = null;
-    let selfId = null;
-    const otherPlayers = {}; // id -> {x,y,size,espada,...}
-
+//multiplayer
     try {
       socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
 
