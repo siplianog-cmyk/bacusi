@@ -136,6 +136,7 @@
     /* aumentar HUD no mobile */
     .mobile #hud-panel { font-size: 1.2em; padding: 10px 16px; }
   </style>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
   <div id="hud-panel">
@@ -187,6 +188,10 @@
     const MAPA_ALTURA = 1200;
     let camera = { x: 0, y: 0 };
     let florestaDesbloqueada = false;
+    
+    //outros players
+    let otherPlayers = {};
+    const socket = io("https://bacusi-server.onrender.com");
 
     // FULLSCREEN CANVAS
     const canvas = document.getElementById('game');
@@ -226,6 +231,27 @@
       { id: 'bomba', nome: 'Bomba', emoji: '💣' }
     ];
     let hotbarSelecionado = 0;
+    
+    socket.on('currentPlayers', (players) => {
+    for (let id in players) {
+        if (id !== socket.id) {
+            otherPlayers[id] = players[id];
+        }
+    }
+});
+
+socket.on('newPlayer', (newPlayer) => {
+    otherPlayers[newPlayer.id] = newPlayer;
+});
+
+socket.on('playerDisconnected', (playerId) => {
+    delete otherPlayers[playerId];
+});
+
+socket.on('playerMoved', (playerData) => {
+    otherPlayers[playerData.id] = playerData;
+});
+
 
     function renderHotbar() {
       // desktop
@@ -655,15 +681,21 @@
       gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false }] : [];
     }
 
-    function movePlayer() {
-      let vel = player.speed;
-      if (florestaDesbloqueada && player.x > W() - 80) vel = player.speed * 0.55;
-      if ((keys['ArrowUp'] || keys['w']) && player.y > 0) player.y -= vel;
-      if ((keys['ArrowDown'] || keys['s']) && player.y < MAPA_ALTURA - player.size) player.y += vel;
-      if ((keys['ArrowLeft'] || keys['a']) && player.x > 0) player.x -= vel;
-      if ((keys['ArrowRight'] || keys['d']) && player.x < MAPA_LARGURA - player.size) player.x += vel;
-      if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
-    }
+function movePlayer() {
+  let vel = player.speed;
+  let moved = false; // Adicionamos esta variável para rastrear se o jogador se moveu
+  if (florestaDesbloqueada && player.x > W()-100) vel = player.speed * 0.55;
+  if ((keys['ArrowUp'] || keys['w']) && player.y > 0) { player.y -= vel; moved = true; }
+  if ((keys['ArrowDown'] || keys['s']) && player.y < MAPA_ALTURA - player.size) { player.y += vel; moved = true; }
+  if ((keys['ArrowLeft'] || keys['a']) && player.x > 0) { player.x -= vel; moved = true; }
+  if ((keys['ArrowRight'] || keys['d']) && player.x < MAPA_LARGURA - player.size) { player.x += vel; moved = true; }
+  if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
+
+  // Se o jogador se moveu, enviamos a nova posição para o servidor
+  if (moved) {
+      socket.emit('playerMovement', { x: player.x, y: player.y });
+  }
+}
 
     function updateCamera() {
       if (florestaDesbloqueada && player.x > W()-100) {
@@ -1093,7 +1125,11 @@
         if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
 
         // multiplayer: enviar posição batida
+
         throttleSendState();
+        
+
+
 
         requestAnimationFrame(gameLoop);
       } else if (!running) {
