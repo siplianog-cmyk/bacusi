@@ -9,6 +9,9 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 const players = {};
+setInterval(() => {
+    io.emit('state', players);
+}, 50); // Envia o estado a cada 50ms (20 vezes por segundo)
 
 io.on('connection', (socket) => {
     console.log('Um jogador se conectou:', socket.id);
@@ -26,13 +29,11 @@ io.on('connection', (socket) => {
         io.emit('playerDisconnected', socket.id);
     });
 
-    socket.on('playerMovement', (movementData) => {
-        if(players[socket.id]) {
-            players[socket.id].x = movementData.x;
-            players[socket.id].y = movementData.y;
-            io.emit('playerMoved', players[socket.id]);
-        }
-    });
+socket.on('state', (playerData) => {
+    if(players[socket.id]) {
+        players[socket.id] = { ...players[socket.id], ...playerData };
+    }
+});
 });
 
 server.listen(PORT, () => {
