@@ -373,7 +373,8 @@ body.mobile {
     resetParticles();
     window.addEventListener('resize', resetParticles);
 
-// ... o resto das suas variáveis
+    // JOGO
+    let player, keys, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
     let bombs = [];
@@ -407,6 +408,9 @@ body.mobile {
         });
     }
 
+    function resetGame() {
+        checkMobile();  //checa se é mobile
+    ...
 
     function resetGame() {
     checkMobile();  //checa se é mobile
@@ -1328,7 +1332,6 @@ function movePlayer() {
       const t = e.changedTouches[0];
       updateMouseFromTouch(t);
     }, {passive:false});
-
 
     // ====== MULTIPLAYER (ADICIONADO) ======
 
