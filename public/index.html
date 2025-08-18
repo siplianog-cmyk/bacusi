@@ -175,7 +175,7 @@ body.mobile {
     <div id="inv" class="desktop-only"></div>
     <div id="craft"></div>
   </div>
-  <div id="hotbar"></div>
+  <div id="hotbar" class="desktop-only"></div>
 
   <!-- HOTBAR MOBILE (ADICIONADO) -->
   <div id="mobile-hotbar" class="mobile-only"></div>
@@ -447,11 +447,15 @@ body.mobile {
       resetParticles();
       spawnEnemy();
       spawnMaterials();
-      restartBtn.style.display = 'none';
 
       if (isMobileDevice) {
-      mobileControls.style.display = 'block';
-      }
+      mobileControls.style.display = 'flex';
+      actionButtons.style.display = 'flex';
+      mobileHotbar.style.display = 'flex';
+     }
+
+      restartBtn.style.display = 'none';
+
 
       announceSelf(); // multiplayer
       requestAnimationFrame(gameLoop);
