@@ -1312,18 +1312,22 @@ function movePlayer() {
       updateMouseFromTouch(t);
     }, {passive:false});
 
+// ADICIONADO: Renderiza a hotbar do celular
     function renderMobileHotbar() {
-      if (!isMobile) return;
-      mobileHotbar.innerHTML = '';
-      hotbarItens.forEach((it, i)=>{
-        const qtdRaw = inventory[it.id];
-        let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
-        const slot = document.createElement('div');
-        slot.className = 'm-slot' + (i===hotbarSelecionado ? ' active' : '');
-        slot.innerHTML = `${it.emoji}<span style="position:absolute;bottom:4px;right:8px;font-size:.6em">${qtd||''}</span>`;
-        slot.onclick = ()=>{ hotbarSelecionado = i; renderHotbar(); };
-        mobileHotbar.appendChild(slot);
-      });
+        const mobileHotbar = document.getElementById('mobile-hotbar');
+        mobileHotbar.innerHTML = '';
+        hotbarItens.forEach((item, i) => {
+            const qtdRaw = inventory[item.id];
+            let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
+            if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
+            const slot = document.createElement('div');
+            slot.className = 'm-slot';
+            if (hotbarSelecionado === i) slot.classList.add('active');
+            slot.title = item.nome;
+            slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em">(${qtd || ''})</span>`;
+            slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); };
+            mobileHotbar.appendChild(slot);
+        });
     }
 
     // ====== MULTIPLAYER (ADICIONADO) ======
