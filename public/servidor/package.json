@@ -1,0 +1,16 @@
+{
+  "name": "jogo-servidor",
+  "version": "1.0.0",
+  "description": "Servidor para o jogo multiplayer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

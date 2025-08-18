@@ -2,9 +2,35 @@
 <html lang="pt-BR">
 <head>
   <style>
-    .mobile #hud-panel, .mobile #hotbar {
-        display: none !important;
-    }
+<style>
+/* ... seu CSS anterior ... */
+
+#hud-panel {
+  position:absolute;
+  top: 5px; /* Ajuste para não ficar colado no topo */
+  right: 5px; /* Ajuste para não ficar colado na lateral */
+  background:#000a;
+  color:#fff;
+  padding:10px;
+  border-radius:10px;
+  box-shadow:0 4px 10px #000a;
+  width:250px;
+  font-family:sans-serif;
+  font-size:1em;
+  line-height:1.4em;
+  z-index: 50; /* Garante que a HUD fique em cima de outros elementos */
+}
+
+/* Adicione este bloco para otimizar para telas menores */
+@media (max-width: 600px) {
+  #hud-panel {
+    top: 5px;
+    right: 5px;
+    width: 160px; /* Diminui a largura no celular */
+    font-size: 0.8em; /* Diminui a fonte no celular */
+  }
+}
+</style>
 </style>
   <meta charset="UTF-8" />
   <title>Jogo de Sobrevivência JS</title>
@@ -231,6 +257,60 @@
       { id: 'bomba', nome: 'Bomba', emoji: '💣' }
     ];
     let hotbarSelecionado = 0;
+    // Adiciona event listeners para as teclas de movimento e uso
+    window.addEventListener('keydown', (event) => {
+      keys[event.key] = true;
+    });
+
+    window.addEventListener('keyup', (event) => {
+      keys[event.key] = false;
+    
+      // Implementação da tecla 'E' para usar/criar o item
+      if (event.key === 'e' || event.key === 'E') {
+        const item = hotbarItens[hotbarSelecionado];
+        if (item) {
+            // Se for um item de construção/uso, use-o
+            if (item.id === 'parede-pedra' || item.id === 'bomba' || item.id === 'gema') {
+                buildAt(player.x, player.y);
+            } else {
+                // Se for uma ferramenta ou armadura, use-a
+                useItem(item.id);
+            }
+        }
+      }
+    });
+    
+    // Implementação do rolamento do mouse para selecionar itens
+    window.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      hotbarSelecionado += Math.sign(event.deltaY);
+      if (hotbarSelecionado < 0) {
+        hotbarSelecionado = hotbarItens.length - 1;
+      }
+      if (hotbarSelecionado >= hotbarItens.length) {
+        hotbarSelecionado = 0;
+      }
+    });
+
+    // MOUSE: muda o comportamento do clique para usar o item selecionado
+    canvas.addEventListener('mousedown', (event) => {
+      if (!isMobile) {
+        const rect = canvas.getBoundingClientRect();
+        mouseWorld.x = event.clientX - rect.left + camera.x;
+        mouseWorld.y = event.clientY - rect.top + camera.y;
+        
+        const item = hotbarItens[hotbarSelecionado];
+        if (item) {
+            // Se for um item de construção/uso, use-o no local do clique
+            if (item.id === 'parede-pedra' || item.id === 'bomba' || item.id === 'gema') {
+                buildAt(mouseWorld.x, mouseWorld.y);
+            } else {
+                // Se for uma ferramenta ou armadura, use-a
+                useItem(item.id);
+            }
+        }
+      }
+    });
 
    function renderHotbar() {
     // desktop
@@ -286,6 +366,60 @@
     function resetGame() {
       player = { x: W()/2, y: H()/2, size: 40, speed: 4, blink: 0, vida: 5, armadura: false, invencivel: 0, id: selfId };
       keys = {};
+      // Adiciona event listeners para as teclas de movimento e uso
+    window.addEventListener('keydown', (event) => {
+      keys[event.key] = true;
+    });
+
+    window.addEventListener('keyup', (event) => {
+      keys[event.key] = false;
+    
+      // Implementação da tecla 'E' para usar/criar o item
+      if (event.key === 'e' || event.key === 'E') {
+        const item = hotbarItens[hotbarSelecionado];
+        if (item) {
+            // Se for um item de construção/uso, use-o
+            if (item.id === 'parede-pedra' || item.id === 'bomba' || item.id === 'gema') {
+                buildAt(player.x, player.y);
+            } else {
+                // Se for uma ferramenta ou armadura, use-a
+                useItem(item.id);
+            }
+        }
+      }
+    });
+    
+    // Implementação do rolamento do mouse para selecionar itens
+    window.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      hotbarSelecionado += Math.sign(event.deltaY);
+      if (hotbarSelecionado < 0) {
+        hotbarSelecionado = hotbarItens.length - 1;
+      }
+      if (hotbarSelecionado >= hotbarItens.length) {
+        hotbarSelecionado = 0;
+      }
+    });
+
+    // MOUSE: muda o comportamento do clique para usar o item selecionado
+    canvas.addEventListener('mousedown', (event) => {
+      if (!isMobile) {
+        const rect = canvas.getBoundingClientRect();
+        mouseWorld.x = event.clientX - rect.left + camera.x;
+        mouseWorld.y = event.clientY - rect.top + camera.y;
+        
+        const item = hotbarItens[hotbarSelecionado];
+        if (item) {
+            // Se for um item de construção/uso, use-o no local do clique
+            if (item.id === 'parede-pedra' || item.id === 'bomba' || item.id === 'gema') {
+                buildAt(mouseWorld.x, mouseWorld.y);
+            } else {
+                // Se for uma ferramenta ou armadura, use-a
+                useItem(item.id);
+            }
+        }
+      }
+    });
       enemies = [];
       materials = [];
       buildings = [];
@@ -461,21 +595,25 @@
     });
 
     // clique
-    canvas.addEventListener('mousedown', e => {
-      e.preventDefault();
-      if (e.button === 0) {
-        if (buildMode === 'parede_madeira' || buildMode === 'parede_pedra' || buildMode === 'tocha' || buildMode === 'bomba' || buildMode === 'superpicareta') {
-          buildAt(mouseWorld.x, mouseWorld.y);
-        } else if (buildMode === 'picareta') {
-          usePickaxeAt(mouseWorld.x, mouseWorld.y);
-        } else {
-          usarHotbarAtMouse();
+canvas.addEventListener('mousedown', (event) => {
+    if (!isMobile) {
+        const rect = canvas.getBoundingClientRect();
+        mouseWorld.x = event.clientX - rect.left + camera.x;
+        mouseWorld.y = event.clientY - rect.top + camera.y;
+
+        const item = hotbarItens[hotbarSelecionado];
+        if (item) {
+            // Verifica o item selecionado e chama a função correta
+            if (item.id === 'parede-pedra') {
+                buildAt(mouseWorld.x, mouseWorld.y);
+            } else if (item.id === 'bomba') {
+                detonateBomb(mouseWorld.x, mouseWorld.y);
+            } else {
+                useItem(item.id);
+            }
         }
-      } else if (e.button === 2) {
-        buildMode = null;
-        updateCrafting();
-      }
-    });
+    }
+});
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -623,6 +761,37 @@
         usePickaxeAt(x, y);
       }
     }
+    
+    function detonateBomb(x, y) {
+    if (inventory.bomba <= 0) return;
+    inventory.bomba--;
+
+    // Raio da explosão em blocos (por exemplo, 3 blocos de raio)
+    const explosionRadiusBlocks = 3;
+    const explosionRadiusPixels = explosionRadiusBlocks * blockSize;
+
+    // Destruir inimigos próximos
+    enemies.forEach(enemy => {
+        const dist = Math.sqrt(Math.pow(enemy.x - x, 2) + Math.pow(enemy.y - y, 2));
+        if (dist < explosionRadiusPixels) {
+            enemy.hp -= 50; // Dano da bomba
+        }
+    });
+
+    // Destruir blocos ao redor
+    for (let i = -explosionRadiusBlocks; i <= explosionRadiusBlocks; i++) {
+        for (let j = -explosionRadiusBlocks; j <= explosionRadiusBlocks; j++) {
+            const tileX = Math.floor((x + i * blockSize) / blockSize);
+            const tileY = Math.floor((y + j * blockSize) / blockSize);
+            
+            const tile = getTile(tileX, tileY);
+            if (tile && (tile.id === 'pedra' || tile.id === 'madeira')) {
+                setTile(tileX, tileY, { id: 'vazio', cor: 'transparent' });
+            }
+        }
+    }
+}
+
 
     function spawnEnemy() {
       const edge = Math.floor(Math.random() * 4);
@@ -1042,96 +1211,45 @@
       }
     }
 
-    function gameLoop(now) {
-      if (!startTime) startTime = now;
-       if (running && !paused && document.visibilityState === 'visible') {
-        if (document.visibilityState !== 'visible') {
-          startTime = now - (elapsed * 1000); // Garante que o tempo não avance
-           requestAnimationFrame(gameLoop);
-          return;
-      }
-        elapsed = (now - startTime) / 1000;
-        timerSpan.textContent = elapsed.toFixed(1);
-        dias = Math.floor(elapsed / (dayLength*2)) + 1;
-        if (dias !== lastDay) { showDayTransition(dias); lastDay = dias; }
-        diasSpan.textContent = "Dia " + dias;
-        if (!florestaDesbloqueada && dias >= 15) {
-          florestaDesbloqueada = true;
-          spawnMaterials();
-        }
-        if (!montanhaLiberada && dias >= 1000) montanhaLiberada = true;
-        isDay = Math.floor(elapsed / dayLength) % 2 === 0;
-        movePlayer();
-        updateCamera();
-        moveEnemies();
-        checkCollision();
+function gameLoop(now) {
+  if (!startTime) startTime = now;
+  let nowSeconds = now / 1000;
+  let dt = 0;
+  if (lastElapsed > 0) {
+    dt = nowSeconds - lastElapsed;
+  }
+  lastElapsed = nowSeconds;
 
-        for (let i = bombs.length-1; i >= 0; i--) {
-          const b = bombs[i];
-          b.timer -= (1000/60);
-          if (b.timer <= 0) {
-            const ex = b.x + b.size/2, ey = b.y + b.size/2;
-            const r = 120;
-            for (let j = enemies.length-1; j >= 0; j--) {
-              const e = enemies[j];
-              if (!e.alive) continue;
-              if (Math.hypot(e.x+e.size/2-ex, e.y+e.size/2-ey) <= r) { e.alive = false; }
-            }
-            for (let j = materials.length-1; j >= 0; j--) {
-              const m = materials[j];
-              if (Math.hypot(m.x+m.size/2-ex, m.y+m.size/2-ey) <= r) m.x = -100;
-            }
-            for (let j = buildings.length-1; j >= 0; j--) {
-              const bld = buildings[j];
-              if (Math.hypot(bld.x+bld.size/2-ex, bld.y+bld.size/2-ey) <= r) buildings.splice(j,1);
-            }
-            if (Math.hypot(player.x+player.size/2-ex, player.y+player.size/2-ey) <= r) {
-              player.vida -= 2; updateVida();
-              if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
-            }
-            bombs.splice(i,1);
-          }
-        }
+  // CORREÇÃO: Pausa o jogo quando a aba não está visível
+  if (document.visibilityState !== 'visible') {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
 
-        drawBackground(now);
-        ctx.save();
-        ctx.translate(-camera.x, -camera.y);
-        drawWorld(now);
-        ctx.restore();
-
-        if (player.invencivel > 0) player.invencivel--;
-        if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
-        if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
-
-        // multiplayer: enviar posição batida
-        throttleSendState();
-
-        requestAnimationFrame(gameLoop);
-      } else if (!running) {
-        timerSpan.textContent = elapsed.toFixed(1);
-        ctx.save();
-        ctx.globalAlpha = 0.85;
-        ctx.fillStyle = '#222b';
-        ctx.fillRect(W()/2-180, H()/2-80, 360, 160);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = 'white';
-        ctx.font = '38px Arial';
-        ctx.textAlign = "center";
-        ctx.fillText('Game Over!', W()/2, H()/2-10);
-        ctx.font = '24px Arial';
-        ctx.fillText('Tempo: ' + elapsed.toFixed(1) + ' s', W()/2, H()/2+30);
-        ctx.restore();
-      }
-      if (paused) {
-        drawBackground(now);
-        ctx.save();
-        ctx.translate(-camera.x, -camera.y);
-        drawWorld(now);
-        ctx.restore();
-        requestAnimationFrame(gameLoop);
-      }
+  // ATUALIZAÇÃO DO JOGO
+  if (running && !paused) {
+    // Atualizar o tempo do dia
+    dayTime += dt;
+    if (dayTime >= dayLength) {
+      day++;
+      dayTime = 0;
+      spawnEnemy();
     }
 
+    updatePlayer();
+    updateEnemies();
+    checkCollisions();
+    updateCamera();
+    updateUI();
+    // throttleSendState(); // desabilite esta linha se não estiver usando multiplayer
+  }
+  
+  drawGame();
+  requestAnimationFrame(gameLoop);
+}
+
+
+    
 // ====== MOBILE: detecção + UI + toques (ADICIONADO) ======
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
     const mobileControls = document.getElementById('mobile-controls');
