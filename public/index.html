@@ -251,7 +251,121 @@ const actionButtons = document.getElementById('action-buttons');
     ];
     let hotbarSelecionado = 0;
 
+    // ====== MULTIPLAYER (ADICIONADO) ======
 
+// multiplayer
+    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com"; // Troque para a URL do seu servidor.
+    let socket = null;
+    let selfId = null;
+    const otherPlayers = {};
+
+    try {
+      socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
+
+      // Eventos do Socket.IO para o cliente
+      socket.on('connect', () => { 
+          selfId = socket.id;
+          console.log('Conectado ao servidor com ID:', selfId);
+          announceSelf(); 
+      });
+// Função para anunciar a chegada do player para o servidor
+function announceSelf() {
+    if (socket && socket.connected) {
+        // Envia a posição inicial do player e a vida atual
+        socket.emit('playerState', {
+            id: player.id,
+            x: player.x,
+            y: player.y,
+            vida: player.vida
+        });
+    }
+}
+
+// throttling
+let lastSentState = 0;
+const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
+
+function throttleSendState() {
+  const now = performance.now();
+  if (now - lastSentState > STATE_SEND_INTERVAL) {
+    if (socket && socket.connected) {
+      socket.emit('playerState', {
+        id: player.id,
+        x: player.x,
+        y: player.y,
+        vida: player.vida,
+        // Inclua outros dados relevantes como isAttacking, item hotbar, etc.
+      });
+    }
+    lastSentState = now;
+  }
+}
+
+
+      socket.on('currentPlayers', (players) => {
+        for (let id in players) {
+          if (id !== socket.id) {
+            otherPlayers[id] = players[id];
+          }
+        }
+      });
+
+      socket.on('newPlayer', (newPlayer) => {
+        otherPlayers[newPlayer.id] = newPlayer;
+      });
+
+      socket.on('playerDisconnected', (playerId) => {
+        delete otherPlayers[playerId];
+      });
+      
+socket.on('state', payload => {
+        if (!payload) return;
+        
+        // Limpa a lista para garantir que jogadores que saíram sejam removidos
+        const playerIdsInPayload = new Set(Object.keys(payload));
+        for (const id in otherPlayers) {
+            if (!playerIdsInPayload.has(id)) {
+                delete otherPlayers[id];
+            }
+        }
+        
+        // Adiciona ou atualiza a informação dos jogadores
+        for (const id in payload) {
+            if (id !== selfId) {
+                otherPlayers[id] = payload[id];
+            }
+        }
+      });
+      
+      socket.on('leave', id => { delete otherPlayers[id]; });
+
+    } catch (e) {
+      console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
+    }
+
+
+  // Mapeia os botões móveis para as teclas do jogo
+  document.getElementById('up-btn').addEventListener('touchstart', () => { keys.w = true; });
+  document.getElementById('up-btn').addEventListener('touchend', () => { keys.w = false; });
+
+  document.getElementById('down-btn').addEventListener('touchstart', () => { keys.s = true; });
+  document.getElementById('down-btn').addEventListener('touchend', () => { keys.s = false; });
+
+  document.getElementById('left-btn').addEventListener('touchstart', () => { keys.a = true; });
+  document.getElementById('left-btn').addEventListener('touchend', () => { keys.a = false; });
+
+  document.getElementById('right-btn').addEventListener('touchstart', () => { keys.d = true; });
+  document.getElementById('right-btn').addEventListener('touchend', () => { keys.d = false; });
+
+  document.getElementById('action-btn').addEventListener('touchstart', () => {
+    // Simula a tecla 'E' para ações
+    keys.e = true;
+    player.isAttacking = true;
+  });
+  document.getElementById('action-btn').addEventListener('touchend', () => {
+    keys.e = false;
+    player.isAttacking = false;
+  });
 
 
     function renderHotbar() {
@@ -1241,122 +1355,6 @@ if (isMobileDevice) {
       const t = e.changedTouches[0];
       updateMouseFromTouch(t);
     }, {passive:false});
-
-    // ====== MULTIPLAYER (ADICIONADO) ======
-
-// multiplayer
-    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com"; // Troque para a URL do seu servidor.
-    let socket = null;
-    let selfId = null;
-    const otherPlayers = {};
-
-    try {
-      socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
-
-      // Eventos do Socket.IO para o cliente
-      socket.on('connect', () => { 
-          selfId = socket.id;
-          console.log('Conectado ao servidor com ID:', selfId);
-          announceSelf(); 
-      });
-// Função para anunciar a chegada do player para o servidor
-function announceSelf() {
-    if (socket && socket.connected) {
-        // Envia a posição inicial do player e a vida atual
-        socket.emit('playerState', {
-            id: player.id,
-            x: player.x,
-            y: player.y,
-            vida: player.vida
-        });
-    }
-}
-
-// throttling
-let lastSentState = 0;
-const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
-
-function throttleSendState() {
-  const now = performance.now();
-  if (now - lastSentState > STATE_SEND_INTERVAL) {
-    if (socket && socket.connected) {
-      socket.emit('playerState', {
-        id: player.id,
-        x: player.x,
-        y: player.y,
-        vida: player.vida,
-        // Inclua outros dados relevantes como isAttacking, item hotbar, etc.
-      });
-    }
-    lastSentState = now;
-  }
-}
-
-
-      socket.on('currentPlayers', (players) => {
-        for (let id in players) {
-          if (id !== socket.id) {
-            otherPlayers[id] = players[id];
-          }
-        }
-      });
-
-      socket.on('newPlayer', (newPlayer) => {
-        otherPlayers[newPlayer.id] = newPlayer;
-      });
-
-      socket.on('playerDisconnected', (playerId) => {
-        delete otherPlayers[playerId];
-      });
-      
-socket.on('state', payload => {
-        if (!payload) return;
-        
-        // Limpa a lista para garantir que jogadores que saíram sejam removidos
-        const playerIdsInPayload = new Set(Object.keys(payload));
-        for (const id in otherPlayers) {
-            if (!playerIdsInPayload.has(id)) {
-                delete otherPlayers[id];
-            }
-        }
-        
-        // Adiciona ou atualiza a informação dos jogadores
-        for (const id in payload) {
-            if (id !== selfId) {
-                otherPlayers[id] = payload[id];
-            }
-        }
-      });
-      
-      socket.on('leave', id => { delete otherPlayers[id]; });
-
-    } catch (e) {
-      console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
-    }
-
-
-  // Mapeia os botões móveis para as teclas do jogo
-  document.getElementById('up-btn').addEventListener('touchstart', () => { keys.w = true; });
-  document.getElementById('up-btn').addEventListener('touchend', () => { keys.w = false; });
-
-  document.getElementById('down-btn').addEventListener('touchstart', () => { keys.s = true; });
-  document.getElementById('down-btn').addEventListener('touchend', () => { keys.s = false; });
-
-  document.getElementById('left-btn').addEventListener('touchstart', () => { keys.a = true; });
-  document.getElementById('left-btn').addEventListener('touchend', () => { keys.a = false; });
-
-  document.getElementById('right-btn').addEventListener('touchstart', () => { keys.d = true; });
-  document.getElementById('right-btn').addEventListener('touchend', () => { keys.d = false; });
-
-  document.getElementById('action-btn').addEventListener('touchstart', () => {
-    // Simula a tecla 'E' para ações
-    keys.e = true;
-    player.isAttacking = true;
-  });
-  document.getElementById('action-btn').addEventListener('touchend', () => {
-    keys.e = false;
-    player.isAttacking = false;
-  });
 
 
   // Corrigido o bug que fazia a tela azul
