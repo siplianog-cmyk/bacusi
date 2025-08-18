@@ -1354,7 +1354,6 @@ socket.on('state', payload => {
       if (!socket || !socket.connected) return;
       socket.emit('join', { id: selfId });
     }
-    let lastSend = 0;
     function throttleSendState() {
       const now = performance.now();
       if (!socket || !socket.connected) return;
