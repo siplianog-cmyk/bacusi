@@ -168,7 +168,7 @@ body.mobile {
 
   <body>
 
-    <!--divs do hud-->>
+    <!--divs do panel-->>
   <div id="hud-panel" class="desktop-only">
     <div id="info">
       <span id="timer">0.0</span> s &nbsp;|&nbsp; 
@@ -1294,17 +1294,10 @@ function movePlayer() {
     }
 
     // ====== MOBILE: detecção + UI + toques (ADICIONADO) ======
-    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-    const mobileControls = document.getElementById('mobile-controls');
-    const actionButtons = document.getElementById('action-buttons');
-    const mobileHotbar = document.getElementById('mobile-hotbar');
-
-    if (isMobileDevice) {
-      document.body.classList.add('mobile');
-      mobileControls.style.display = 'block';
-      actionButtons.style.display = 'flex';
-      mobileHotbar.style.display = 'flex';
-    }
+const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+if (isMobileDevice) {
+  document.body.classList.add('mobile');
+}
 
     function bindTouch(btnId, key) {
       const btn = document.getElementById(btnId);
