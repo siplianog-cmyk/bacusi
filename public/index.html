@@ -172,7 +172,7 @@ body.mobile {
       <span class="heart" id="vida"></span>
       <span class="armor" id="armadura"></span>
     </div>
-    <div id="inv"></div>
+    <div id="inv" class="desktop-only"></div>
     <div id="craft"></div>
   </div>
   <div id="hotbar"></div>
@@ -380,16 +380,6 @@ body.mobile {
     let bombs = [];
     let isMobile = false;
 
-    // ADICIONADO: Função para detectar celular
-    function checkMobile() {
-        isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-            document.body.classList.add('mobile');
-        } else {
-            document.body.classList.remove('mobile');
-        }
-    }
-
     function renderMobileHotbar() {
         const mobileHotbar = document.getElementById('mobile-hotbar');
         if (!mobileHotbar) return;
@@ -411,7 +401,6 @@ body.mobile {
 
 
     function resetGame() {
-    checkMobile();  //checa se é mobile
       player = { x: W()/2, y: H()/2, size: 40, speed: 4, blink: 0, vida: 5, armadura: false, invencivel: 0, id: selfId };
       keys = {};
       enemies = [];
@@ -636,22 +625,28 @@ document.getElementById('btn-use').addEventListener('touchstart', usarHotbarAtMo
 
     restartBtn.addEventListener('click', resetGame);
 
-    // INVENTÁRIO / CRAFT / VIDA
-    function updateInventory() {
-      let txt = `<span style="background:rgba(34,34,60,0.7);padding:4px 12px;border-radius:8px;">🌲 Madeira: ${inventory.madeira} | 🌳 Madeira Floresta: ${inventory.madeira_floresta} | 🪨 Pedra: ${inventory.pedra}`;
-      txt += ` | 💣 Bombas: ${inventory.bomba} | 💎 Gema: ${inventory.gema}`;
-      txt += ` | ⚔️ Espada: ${inventory.espada ? 'Sim' : 'Não'} | ⛏️ Picareta: ${inventory.picareta ? 'Sim' : 'Não'}`;
-      txt += ` | 🔥 Tochas: ${inventory.tocha} | 🟫 Parede Madeira: ${inventory.parede_madeira} | ⬜ Parede Pedra: ${inventory.parede_pedra}`;
-      txt += ` | 🍎 Maçã: ${inventory.maca} | 🦺 Armadura: ${inventory.armadura ? 'Sim' : 'Não'}</span>`;
-      txt += `<br><span style="font-size:13px">
-      [F] espada (3 madeira, 2 pedra), [G] picareta (2 madeira, 3 pedra), [R] tocha (1 madeira, 1 pedra), [C] parede madeira (2 madeira), [V] parede pedra (3 pedra), [B] maçã (2 madeira, 1 pedra), [Y] armadura (4 pedra, 2 madeira), [U] gema (5 gemas = super picareta), [M] bomba (2 pedra, 2 madeira)
-      </span>`;
-      txt += `<br><span style="font-size:13px">
-      [ESPAÇO] atacar, [1-0] hotbar, [E/Enter/🎒] usar item (no cursor), [Q] sair construção
-      </span>`;
-      invDiv.innerHTML = txt;
-      renderHotbar();
+function updateInventory() {
+    // Adiciona uma verificação para a classe `mobile-only`
+    if (document.body.classList.contains('mobile')) {
+        // Se for mobile, não renderiza a caixa de atalhos
+        invDiv.innerHTML = '';
+    } else {
+        // Lógica de renderização original para desktop
+        let txt = `<span style="background:rgba(34,34,60,0.7);padding:4px 12px;border-radius:8px;">🌲 Madeira: ${inventory.madeira} | 🌳 Madeira Floresta: ${inventory.madeira_floresta} | 🪨 Pedra: ${inventory.pedra}`;
+        txt += ` | 💣 Bombas: ${inventory.bomba} | 💎 Gema: ${inventory.gema}`;
+        txt += ` | ⚔️ Espada: ${inventory.espada ? 'Sim' : 'Não'} | ⛏️ Picareta: ${inventory.picareta ? 'Sim' : 'Não'}`;
+        txt += ` | 🔥 Tochas: ${inventory.tocha} | 🟫 Parede Madeira: ${inventory.parede_madeira} | ⬜ Parede Pedra: ${inventory.parede_pedra}`;
+        txt += ` | 🍎 Maçã: ${inventory.maca} | 🦺 Armadura: ${inventory.armadura ? 'Sim' : 'Não'}</span>`;
+        txt += `<br><span style="font-size:13px">
+        [F] espada (3 madeira, 2 pedra), [G] picareta (2 madeira, 3 pedra), [R] tocha (1 madeira, 1 pedra), [C] parede madeira (2 madeira), [V] parede pedra (3 pedra), [B] maçã (2 madeira, 1 pedra), [Y] armadura (4 pedra, 2 madeira), [U] gema (5 gemas = super picareta), [M] bomba (2 pedra, 2 madeira)
+        </span>`;
+        txt += `<br><span style="font-size:13px">
+        [ESPAÇO] atacar, [1-0] hotbar, [E/Enter/🎒] usar item (no cursor), [Q] sair construção
+        </span>`;
+        invDiv.innerHTML = txt;
     }
+    renderHotbar();
+}
     function updateCrafting() {
       let txt = `<b>Modo Construção:</b> `;
       if (buildMode === 'parede_madeira') txt += '🟫 Parede de Madeira';
@@ -1281,12 +1276,12 @@ function movePlayer() {
     }
 
     // ====== MOBILE: detecção + UI + toques (ADICIONADO) ======
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
     const mobileControls = document.getElementById('mobile-controls');
     const actionButtons = document.getElementById('action-buttons');
     const mobileHotbar = document.getElementById('mobile-hotbar');
 
-    if (isMobile) {
+    if (isMobileDevice) {
       document.body.classList.add('mobile');
       mobileControls.style.display = 'block';
       actionButtons.style.display = 'flex';
