@@ -374,12 +374,11 @@ body.mobile {
     window.addEventListener('resize', resetParticles);
 
     // JOGO
-    let isMobile = false;
     let player, keys, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
     let bombs = [];
-
+    let isMobile = false;
 
     // ADICIONADO: Função para detectar celular
 function checkMobile() {
@@ -1312,11 +1311,10 @@ function movePlayer() {
       updateMouseFromTouch(t);
     }, {passive:false});
 
-// ADICIONADO: Renderiza a hotbar do celular
-// ADICIONADO: Renderiza a hotbar do celular
+    
 function renderMobileHotbar() {
     const mobileHotbar = document.getElementById('mobile-hotbar');
-    if (!mobileHotbar) return; // Proteção para caso o elemento não exista
+    if (!mobileHotbar) return;
     mobileHotbar.innerHTML = '';
     hotbarItens.forEach((item, i) => {
         const qtdRaw = inventory[item.id];
@@ -1326,7 +1324,7 @@ function renderMobileHotbar() {
         slot.className = 'm-slot';
         if (hotbarSelecionado === i) slot.classList.add('active');
         slot.title = item.nome;
-        slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em">(${qtd || ''})</span>`;
+        slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em;position:absolute;bottom:4px;right:4px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
         slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); renderMobileHotbar(); };
         mobileHotbar.appendChild(slot);
     });
