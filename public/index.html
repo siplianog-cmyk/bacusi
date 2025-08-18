@@ -1221,6 +1221,100 @@ function movePlayer() {
       }
     }
 
+    // Funções de Desenho
+function drawGrid() {
+    const gridColor = '#333';
+    ctx.strokeStyle = gridColor;
+    const size = 32;
+    for (let x = -camera.x % size; x < W(); x += size) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H());
+        ctx.stroke();
+    }
+    for (let y = -camera.y % size; y < H(); y += size) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W(), y);
+        ctx.stroke();
+    }
+}
+
+function drawMaterials() {
+    for (const material of materials) {
+        const screenX = material.x - camera.x;
+        const screenY = material.y - camera.y;
+        ctx.drawImage(material.sprite, screenX, screenY, material.size, material.size);
+    }
+}
+
+function drawBuildings() {
+    for (const building of buildings) {
+        const screenX = building.x - camera.x;
+        const screenY = building.y - camera.y;
+        ctx.drawImage(building.sprite, screenX, screenY, building.size, building.size);
+    }
+}
+
+function drawTorches() {
+    for (const torch of torches) {
+        const screenX = torch.x - camera.x;
+        const screenY = torch.y - camera.y;
+        // Desenha a luz da tocha
+        ctx.fillStyle = `rgba(255, 200, 50, ${torch.lightAlpha})`;
+        ctx.beginPath();
+        ctx.arc(screenX + torch.size / 2, screenY + torch.size / 2, torch.lightRadius, 0, Math.PI * 2);
+        ctx.fill();
+        // Desenha a tocha
+        ctx.drawImage(torch.sprite, screenX, screenY, torch.size, torch.size);
+    }
+}
+
+function drawBombs() {
+    for (const bomb of bombs) {
+        const screenX = bomb.x - camera.x;
+        const screenY = bomb.y - camera.y;
+        ctx.drawImage(bomb.sprite, screenX, screenY, bomb.size, bomb.size);
+    }
+}
+
+function drawPlayer() {
+    const screenX = player.x - camera.x;
+    const screenY = player.y - camera.y;
+    ctx.drawImage(player.sprite, screenX, screenY, player.size, player.size);
+
+    // Barra de vida do jogador
+    const vidaBarW = 50;
+    const vidaBarH = 5;
+    const vidaX = screenX + (player.size - vidaBarW) / 2;
+    const vidaY = screenY - 10;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(vidaX, vidaY, vidaBarW, vidaBarH);
+    ctx.fillStyle = 'lime';
+    const vidaAtualW = (player.vida / player.maxVida) * vidaBarW;
+    ctx.fillRect(vidaX, vidaY, vidaAtualW, vidaBarH);
+}
+
+function drawEnemies() {
+    for (const enemy of enemies) {
+        const screenX = enemy.x - camera.x;
+        const screenY = enemy.y - camera.y;
+        ctx.drawImage(enemy.sprite, screenX, screenY, enemy.size, enemy.size);
+        
+        // Barra de vida do inimigo
+        const vidaBarW = 30;
+        const vidaBarH = 4;
+        const vidaX = screenX + (enemy.size - vidaBarW) / 2;
+        const vidaY = screenY - 8;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(vidaX, vidaY, vidaBarW, vidaBarH);
+        ctx.fillStyle = 'lime';
+        const vidaAtualW = (enemy.vida / enemy.maxVida) * vidaBarW;
+        ctx.fillRect(vidaX, vidaY, vidaAtualW, vidaBarH);
+    }
+}
+
+
     function gameLoop(now) {
       if (!startTime) startTime = now;
       if (running && !paused) {
