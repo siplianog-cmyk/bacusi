@@ -191,8 +191,6 @@
     
     //outros players
     let otherPlayers = {};
-    const socket = io("https://bacusi-server.onrender.com");
-
     // FULLSCREEN CANVAS
     const canvas = document.getElementById('game');
     function resizeCanvas() {
@@ -1223,7 +1221,7 @@ function movePlayer() {
     }
 
     // ====== MULTIPLAYER (ADICIONADO) ======
-    const SOCKET_SERVER_URL = "http://localhost:3000"; // troque para a URL do seu servidor
+    const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
     let socket = null;
     let selfId = null;
     const otherPlayers = {}; // id -> {x,y,size,espada,...}
