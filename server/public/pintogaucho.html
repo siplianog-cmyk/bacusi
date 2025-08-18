@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <style>
+    .mobile #hud-panel, .mobile #hotbar {
+        display: none;
+    }
+</style>
   <meta charset="UTF-8" />
   <title>Jogo de Sobrevivência JS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
@@ -227,31 +232,32 @@
     ];
     let hotbarSelecionado = 0;
 
-    function renderHotbar() {
-      // desktop
-      hotbarDiv.innerHTML = '';
-      for (let i = 0; i < 10; i++) {
+   function renderHotbar() {
+    // desktop
+    hotbarDiv.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
         const item = hotbarItens[i];
         const qtdRaw = inventory[item.id];
         let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
         if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
         const slot = document.createElement('div');
         slot.style.cssText = `
-          width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-          border-radius:8px;font-size:2em;box-shadow:0 2px 8px #000a;
-          border:3px solid ${hotbarSelecionado===i?'#ffe066':'#444'};
-          background:${hotbarSelecionado===i?'#222b':'#2228'};
-          cursor:pointer;position:relative;
-          transition:border 0.1s,background 0.1s;
+            width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+            border-radius:8px;font-size:2em;box-shadow:0 2px 8px #000a;
+            border:3px solid ${hotbarSelecionado===i?'#ffe066':'#444'};
+            background:${hotbarSelecionado===i?'#222b':'#2228'};
+            cursor:pointer;position:relative;
+            transition:border 0.1s,background 0.1s;
         `;
         slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.7em;position:absolute;bottom:4px;right:8px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
         if (hotbarSelecionado===i) slot.style.boxShadow = '0 0 16px #ffe066,0 2px 8px #000a';
         slot.title = item.nome;
         slot.onclick = ()=>{ hotbarSelecionado=i; renderHotbar(); renderMobileHotbar(); };
         hotbarDiv.appendChild(slot);
-      }
-      renderMobileHotbar();
     }
+    // <--- Adicione esta linha: --->
+    if (isMobile) renderMobileHotbar();
+}
 
     // partículas (fundo)
     let particles = [];
@@ -1121,18 +1127,11 @@
       }
     }
 
-    // ====== MOBILE: detecção + UI + toques (ADICIONADO) ======
+// ====== MOBILE: detecção + UI + toques (ADICIONADO) ======
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
     const mobileControls = document.getElementById('mobile-controls');
     const actionButtons = document.getElementById('action-buttons');
     const mobileHotbar = document.getElementById('mobile-hotbar');
-
-    if (isMobile) {
-      document.body.classList.add('mobile');
-      mobileControls.style.display = 'block';
-      actionButtons.style.display = 'flex';
-      mobileHotbar.style.display = 'flex';
-    }
 
     function bindTouch(btnId, key) {
       const btn = document.getElementById(btnId);
