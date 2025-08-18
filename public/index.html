@@ -157,10 +157,9 @@
     /* aumentar HUD no mobile */
     .mobile #hud-panel { font-size: 1.2em; padding: 10px 16px; }
   </style>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
- <div id="hud-panel" class="desktop-only">
+ <div id="hud-panel">
     <div id="info">
       <span id="timer">0.0</span> s &nbsp;|&nbsp; 
       <span id="dias">Dia 1</span> &nbsp;|&nbsp;
@@ -181,7 +180,7 @@
   <div id="tutorialBox"></div>
   <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
 
-<div id="mobile-controls" class="mobile-only">
+  <div id="mobile-controls" class="mobile-only">
     <div class="dpad">
       <div></div>
       <button id="up-btn">▲</button>
@@ -201,8 +200,12 @@
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 
-
   <script>
+
+    // Adicione isso no início do script, junto com outras declarações de variáveis da UI
+const mobileControls = document.getElementById('mobile-controls');
+const actionButtons = document.getElementById('action-buttons');
+
     // ===== CONFIG MAPA ORIGINAL =====
     const MAPA_LARGURA = 2400;
     const MAPA_ALTURA = 1200;
@@ -247,80 +250,8 @@
       { id: 'bomba', nome: 'Bomba', emoji: '💣' }
     ];
     let hotbarSelecionado = 0;
-    
-//multiplayer
-    try {
-      // Eventos do Socket.IO para o cliente
-      socket.on('connect', () => { 
-          selfId = socket.id;
-          console.log('Conectado ao servidor com ID:', selfId);
-          announceSelf(); 
-      });
 
-      socket.on('currentPlayers', (players) => {
-        for (let id in players) {
-          if (id !== socket.id) {
-            otherPlayers[id] = players[id];
-          }
-        }
-      });
 
-      socket.on('newPlayer', (newPlayer) => {
-        otherPlayers[newPlayer.id] = newPlayer;
-      });
-
-      socket.on('playerDisconnected', (playerId) => {
-        delete otherPlayers[playerId];
-      });
-
-      socket.on('playerMoved', (playerData) => {
-        if(otherPlayers[playerData.id]) {
-          otherPlayers[playerData.id].x = playerData.x;
-          otherPlayers[playerData.id].y = playerData.y;
-        }
-      });
-      
-   socket.on('state', payload => {
-        if (!payload) return;
-        
-        // Limpa a lista para garantir que jogadores que saíram sejam removidos
-        const playerIdsInPayload = new Set(Object.keys(payload));
-        for (const id in otherPlayers) {
-            if (!playerIdsInPayload.has(id)) {
-                delete otherPlayers[id];
-            }
-        }
-        
-        // Adiciona ou atualiza a informação dos jogadores
-        for (const id in payload) {
-            if (id !== selfId) {
-                otherPlayers[id] = payload[id];
-            }
-        }
-      });
-      
-      socket.on('leave', id => { delete otherPlayers[id]; });
-
-    } catch (e) {
-      console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
-    }
-
-    // Funções para comunicação com o servidor
-    function announceSelf() {
-      if (!socket || !socket.connected) return;
-      socket.emit('join', { id: selfId });
-    }
-    function throttleSendState() {
-      const now = performance.now();
-      if (!socket || !socket.connected) return;
-      if (now - lastSend < 80) return;
-      lastSend = now;
-      socket.emit('state', {
-        id: selfId,
-        x: player.x, y: player.y, size: player.size,
-        espada: inventory.espada, picareta: inventory.picareta, superpicareta: inventory.superpicareta, armadura: inventory.armadura
-      });
-    }
 
 
     function renderHotbar() {
@@ -372,7 +303,6 @@
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
     let bombs = [];
-    let isMobile = false;
 
     function renderMobileHotbar() {
         const mobileHotbar = document.getElementById('mobile-hotbar');
@@ -1225,9 +1155,6 @@ function movePlayer() {
 
         drawBackground(now);
 
-       if (isMobileDevice) {
-       mobileControls.style.display = 'none';
-       }
 
         ctx.save();
         ctx.translate(-camera.x, -camera.y);
@@ -1301,7 +1228,7 @@ if (isMobileDevice) {
       mouseWorld.y = touch.clientY - rect.top + camera.y;
     }
     canvas.addEventListener('touchstart', e=>{
-      if (!isMobile) return;
+      if (!isMobileDevice) return;
       e.preventDefault();
       const t = e.changedTouches[0];
       updateMouseFromTouch(t);
@@ -1309,7 +1236,7 @@ if (isMobileDevice) {
       if (buildMode) buildAt(mouseWorld.x, mouseWorld.y); else usarHotbarAtMouse();
     }, {passive:false});
     canvas.addEventListener('touchmove', e=>{
-      if (!isMobile) return;
+      if (!isMobileDevice) return;
       e.preventDefault();
       const t = e.changedTouches[0];
       updateMouseFromTouch(t);
@@ -1332,6 +1259,39 @@ if (isMobileDevice) {
           console.log('Conectado ao servidor com ID:', selfId);
           announceSelf(); 
       });
+// Função para anunciar a chegada do player para o servidor
+function announceSelf() {
+    if (socket && socket.connected) {
+        // Envia a posição inicial do player e a vida atual
+        socket.emit('playerState', {
+            id: player.id,
+            x: player.x,
+            y: player.y,
+            vida: player.vida
+        });
+    }
+}
+
+// throttling
+let lastSentState = 0;
+const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
+
+function throttleSendState() {
+  const now = performance.now();
+  if (now - lastSentState > STATE_SEND_INTERVAL) {
+    if (socket && socket.connected) {
+      socket.emit('playerState', {
+        id: player.id,
+        x: player.x,
+        y: player.y,
+        vida: player.vida,
+        // Inclua outros dados relevantes como isAttacking, item hotbar, etc.
+      });
+    }
+    lastSentState = now;
+  }
+}
+
 
       socket.on('currentPlayers', (players) => {
         for (let id in players) {
@@ -1373,27 +1333,7 @@ socket.on('state', payload => {
     } catch (e) {
       console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
     }
-    
-    // Funções para comunicação com o servidor
-    function announceSelf() {
-      if (!socket || !socket.connected) return;
-      socket.emit('join', { id: selfId });
-    }
-    let lastSend = 0;
-    function throttleSendState() {
-      const now = performance.now();
-      if (!socket || !socket.connected) return;
-      if (now - lastSend < 80) return;
-      lastSend = now;
-      socket.emit('state', {
-        id: selfId,
-        x: player.x, y: player.y, size: player.size,
-        espada: inventory.espada, picareta: inventory.picareta, superpicareta: inventory.superpicareta, armadura: inventory.armadura
-      });
-    }
 
-
-    /* ============== AJUSTES MOBILE (NOVO CÓDIGO) ============== */
 
   // Mapeia os botões móveis para as teclas do jogo
   document.getElementById('up-btn').addEventListener('touchstart', () => { keys.w = true; });
@@ -1418,20 +1358,11 @@ socket.on('state', payload => {
     player.isAttacking = false;
   });
 
-  // Hotbar para celular
-  const mobileHotbar = document.getElementById('mobile-hotbar');
-  // ... continue o código da hotbar aqui se precisar de funcionalidade ...
-
-  // Ajusta a classe do body se for um dispositivo móvel
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    document.body.classList.add('mobile');
-  }
 
   // Corrigido o bug que fazia a tela azul
   document.addEventListener('keydown', (e) => {
     if (e.key === 'r') {
-      if (gameOver) {
+      if (!running) {
         resetGame();
       }
     }
