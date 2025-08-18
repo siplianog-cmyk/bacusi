@@ -230,8 +230,6 @@
     
 //multiplayer
     try {
-      socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
-
       // Eventos do Socket.IO para o cliente
       socket.on('connect', () => { 
           selfId = socket.id;
