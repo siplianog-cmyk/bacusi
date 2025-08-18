@@ -4,44 +4,39 @@
   <meta charset="UTF-8" />
   <title>Jogo de Sobrevivência JS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <style>
-    /* ADICIONADO: Estilos para Mobile */
-body.mobile {
-  /* Estilos para a interface mobile */
-}
-#hud-panel {
-  /* AJUSTADO: max-width para melhor visualização em celular */
-  max-width: 90vw;
-}
-/* ADICIONADO: Regra para telas menores */
-@media (max-width: 768px) {
-  #hud-panel {
-    font-size: 1.2em;
-    padding: 10px 16px;
-    min-width: unset;
-    width: 90vw;
-  }
-}
-/* NOVO: classes para mostrar/esconder elementos */
-.mobile-only { display: none; }
-.mobile .mobile-only { display: block; }
-.desktop-only { display: block; }
-.mobile .desktop-only { display: none; }
-/* aumentar HUD no mobile */
-.mobile #hud-panel { font-size: 1.2em; padding: 10px 16px; }
+<style>
+    /* AJUSTES PARA MOBILE */
+    /* Garante que o HUD e a hotbar se adaptem a telas menores */
+    @media (max-width: 768px) {
+        #hud-panel {
+            font-size: 1.2em;
+            padding: 10px 16px;
+            min-width: unset;
+            width: 90vw;
+        }
+        #hotbar { display: none; } /* Esconde hotbar de desktop em telas pequenas */
+        #mobile-hotbar { display: flex; } /* Mostra a hotbar móvel */
+        #mobile-controls { display: block; } /* Mostra os controles móveis */
+        #action-buttons { display: flex; } /* Mostra os botões de ação móveis */
+    }
 
+    /* As classes desktop-only e mobile-only não são mais necessárias com as @media queries */
+    .mobile .desktop-only { display: none; }
+    .mobile .mobile-only { display: block; }
 
+    /* Estilos globais do jogo */
     html, body {
-      margin: 0; padding: 0;
-      width: 100vw; height: 100vh;
-      overflow: hidden;
-      background: #222;
+        margin: 0; padding: 0;
+        width: 100vw; height: 100vh;
+        overflow: hidden;
+        background: #222;
     }
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(120deg, #2b5876 0%, #4e4376 100%);
-      touch-action: none; /* evita gestos que atrapalham o canvas */
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: linear-gradient(120deg, #2b5876 0%, #4e4376 100%);
+        touch-action: none;
     }
+
     #hud-panel {
       position: absolute;
       top: 12px; left: 50%; transform: translateX(-50%);
@@ -186,21 +181,21 @@ body.mobile {
   <div id="tutorialBox"></div>
   <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
 
-  <div id="mobile-controls" class="mobile-only">
+<div id="mobile-controls" class="mobile-only">
     <div class="dpad">
       <div></div>
-      <button id="btn-up">▲</button>
+      <button id="up-btn">▲</button>
       <div></div>
-      <button id="btn-left">◀</button>
+      <button id="left-btn">◀</button>
       <div></div>
-      <button id="btn-right">▶</button>
+      <button id="right-btn">▶</button>
       <div></div>
-      <button id="btn-down">▼</button>
+      <button id="down-btn">▼</button>
       <div></div>
     </div>
   </div>
   <div id="action-buttons" class="mobile-only">
-    <button id="btn-attack">⚔️</button>
+    <button id="action-btn">⚔️</button>
     <button id="btn-use">🎒</button>
   </div>
 
@@ -571,19 +566,7 @@ body.mobile {
     }, {capture:true});
     document.addEventListener('keyup', e => keys[e.key] = false);
 
-// ADICIONADO: Listeners para os botões do D-Pad
-document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); keys.w = true; }, {passive: false});
-document.getElementById('btn-up').addEventListener('touchend', () => { keys.w = false; });
-document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); keys.a = true; }, {passive: false});
-document.getElementById('btn-left').addEventListener('touchend', () => { keys.a = false; });
-document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); keys.s = true; }, {passive: false});
-document.getElementById('btn-down').addEventListener('touchend', () => { keys.s = false; });
-document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); keys.d = true; }, {passive: false});
-document.getElementById('btn-right').addEventListener('touchend', () => { keys.d = false; });
-    
-// ADICIONADO: Botões de ação
-document.getElementById('btn-attack').addEventListener('touchstart', attackEnemy);
-document.getElementById('btn-use').addEventListener('touchstart', usarHotbarAtMouse);
+
 
 
     hotbarDiv.addEventListener('wheel', e => {
@@ -1409,22 +1392,50 @@ socket.on('state', payload => {
       });
     }
 
-    // Funções para comunicação com o servidor
-    function announceSelf() {
-      if (!socket || !socket.connected) return;
-      socket.emit('join', { id: selfId });
+
+    /* ============== AJUSTES MOBILE (NOVO CÓDIGO) ============== */
+
+  // Mapeia os botões móveis para as teclas do jogo
+  document.getElementById('up-btn').addEventListener('touchstart', () => { keys.w = true; });
+  document.getElementById('up-btn').addEventListener('touchend', () => { keys.w = false; });
+
+  document.getElementById('down-btn').addEventListener('touchstart', () => { keys.s = true; });
+  document.getElementById('down-btn').addEventListener('touchend', () => { keys.s = false; });
+
+  document.getElementById('left-btn').addEventListener('touchstart', () => { keys.a = true; });
+  document.getElementById('left-btn').addEventListener('touchend', () => { keys.a = false; });
+
+  document.getElementById('right-btn').addEventListener('touchstart', () => { keys.d = true; });
+  document.getElementById('right-btn').addEventListener('touchend', () => { keys.d = false; });
+
+  document.getElementById('action-btn').addEventListener('touchstart', () => {
+    // Simula a tecla 'E' para ações
+    keys.e = true;
+    player.isAttacking = true;
+  });
+  document.getElementById('action-btn').addEventListener('touchend', () => {
+    keys.e = false;
+    player.isAttacking = false;
+  });
+
+  // Hotbar para celular
+  const mobileHotbar = document.getElementById('mobile-hotbar');
+  // ... continue o código da hotbar aqui se precisar de funcionalidade ...
+
+  // Ajusta a classe do body se for um dispositivo móvel
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    document.body.classList.add('mobile');
+  }
+
+  // Corrigido o bug que fazia a tela azul
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r') {
+      if (gameOver) {
+        resetGame();
+      }
     }
-    function throttleSendState() {
-      const now = performance.now();
-      if (!socket || !socket.connected) return;
-      if (now - lastSend < 80) return;
-      lastSend = now;
-      socket.emit('state', {
-        id: selfId,
-        x: player.x, y: player.y, size: player.size,
-        espada: inventory.espada, picareta: inventory.picareta, superpicareta: inventory.superpicareta, armadura: inventory.armadura
-      });
-    }
+  });
 
     // ===== INÍCIO =====
     window.onload = () => { askTutorial(); resetGame(); };
