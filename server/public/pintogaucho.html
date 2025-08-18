@@ -3,7 +3,7 @@
 <head>
   <style>
     .mobile #hud-panel, .mobile #hotbar {
-        display: none;
+        display: none !important;
     }
 </style>
   <meta charset="UTF-8" />
@@ -1044,7 +1044,12 @@
 
     function gameLoop(now) {
       if (!startTime) startTime = now;
-      if (running && !paused) {
+       if (running && !paused && document.visibilityState === 'visible') {
+        if (document.visibilityState !== 'visible') {
+          startTime = now - (elapsed * 1000); // Garante que o tempo não avance
+           requestAnimationFrame(gameLoop);
+          return;
+      }
         elapsed = (now - startTime) / 1000;
         timerSpan.textContent = elapsed.toFixed(1);
         dias = Math.floor(elapsed / (dayLength*2)) + 1;
