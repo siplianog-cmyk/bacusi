@@ -1306,8 +1306,18 @@ function movePlayer() {
         delete otherPlayers[playerId];
       });
       
-      socket.on('state', payload => {
-        if (!payload || !payload[selfId]) return;
+socket.on('state', payload => {
+        if (!payload) return;
+        
+        // Limpa a lista para garantir que jogadores que saíram sejam removidos
+        const playerIdsInPayload = new Set(Object.keys(payload));
+        for (const id in otherPlayers) {
+            if (!playerIdsInPayload.has(id)) {
+                delete otherPlayers[id];
+            }
+        }
+        
+        // Adiciona ou atualiza a informação dos jogadores
         for (const id in payload) {
             if (id !== selfId) {
                 otherPlayers[id] = payload[id];
