@@ -1,74 +1,56 @@
-let ws = null;
-let clientId = null;
-let otherPlayers = {};
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { Server } = require("socket.io");
 
-function connectNetwork() {
-  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-  const host = proto + location.host;
-  ws = new WebSocket(host);
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-  ws.onopen = () => { console.log('WS open'); ws.send(JSON.stringify({ type: 'join' })); };
-  ws.onmessage = ev => {
-    try {
-      const msg = JSON.parse(ev.data);
-      if (msg.type === 'welcome') clientId = msg.id;
-      else if (msg.type === 'state') {
-        otherPlayers = {};
-        for (const p of msg.players) if (p.id !== clientId) otherPlayers[p.id] = { ...p, lastUpdate: Date.now() };
-      } else if (msg.type === 'update') {
-        if (msg.player && msg.player.id !== clientId) otherPlayers[msg.player.id] = { ...msg.player, lastUpdate: Date.now() };
-      } else if (msg.type === 'attack') {
-        const atk = msg.attack;
-        if (typeof player !== 'undefined') {
-          const dx = player.x - atk.x, dy = player.y - atk.y;
-          if (Math.hypot(dx, dy) <= (atk.range || 24) + (player.size || 24) / 2) {
-            player.vida = Math.max(0, (player.vida || 0) - (atk.dano || 1));
-          }
+const PORT = process.env.PORT || 3000;
+const players = {};
+
+// Adicionado: Envia o estado de todos os jogadores para os clientes
+setInterval(() => {
+    io.emit('state', players);
+}, 50); // Envia o estado a cada 50ms (20 vezes por segundo)
+
+io.on('connection', (socket) => {
+    console.log('Um jogador se conectou:', socket.id);
+    players[socket.id] = {
+        x: Math.random() * 800,
+        y: Math.random() * 600,
+        id: socket.id,
+        // Adicionado: Inicializa o inventário do jogador
+        size: 40,
+        espada: false,
+        picareta: false,
+        superpicareta: false,
+        armadura: false
+    };
+
+    socket.emit('currentPlayers', players);
+    socket.broadcast.emit('newPlayer', players[socket.id]);
+    
+    socket.on('disconnect', () => {
+        console.log('Jogador desconectou:', socket.id);
+        delete players[socket.id];
+        io.emit('playerDisconnected', socket.id);
+    });
+
+    // Removido 'playerMovement', agora o cliente envia 'state'
+    socket.on('state', (playerData) => {
+        if(players[socket.id]) {
+            players[socket.id] = { ...players[socket.id], ...playerData };
         }
-      } else if (msg.type === 'pickup') {
-        for (let i = (typeof materials !== 'undefined' ? materials.length - 1 : -1); i >= 0; i--) {
-          if (materials && materials[i] && materials[i].id === msg.id) materials.splice(i, 1);
-        }
-      }
-    } catch (e) { console.warn('WS parse', e); }
-  };
-  ws.onclose = () => { console.log('WS closed — reconectando'); setTimeout(() => connectNetwork(), 1000); };
-}
+    });
 
-function sendLocalState() {
-  if (!ws || ws.readyState !== WebSocket.OPEN || !clientId) return;
-  const payload = { type: 'update', player: { id: clientId, x: player.x, y: player.y, size: player.size || 32, vida: player.vida || 0, armadura: inventory && inventory.armadura } };
-  ws.send(JSON.stringify(payload));
-}
+    socket.on('join', (data) => {
+        console.log('Jogador entrou no jogo:', data.id);
+        players[data.id] = { ...players[data.id], ...data };
+    });
+});
 
-function sendAttack(x, y, range, dano = 1) {
-  if (!ws || ws.readyState !== WebSocket.OPEN || !clientId) return;
-  ws.send(JSON.stringify({ type: 'attack', attack: { by: clientId, x, y, range, dano } }));
-}
-
-function sendPickup(materialId) {
-  if (!ws || ws.readyState !== WebSocket.OPEN || !clientId) return;
-  ws.send(JSON.stringify({ type: 'pickup', id: materialId, by: clientId }));
-}
-
-setInterval(() => { sendLocalState(); }, 100);
-
-function drawOtherPlayers(ctxLocal) {
-  if (!otherPlayers) return;
-  for (const id in otherPlayers) {
-    const p = otherPlayers[id];
-    if (Date.now() - p.lastUpdate > 5000) { delete otherPlayers[id]; continue; }
-    ctxLocal.save();
-    ctxLocal.translate(p.x - (typeof camera !== 'undefined' ? camera.x : 0), p.y - (typeof camera !== 'undefined' ? camera.y : 0));
-    ctxLocal.fillStyle = '#4dd0e1';
-    const s = p.size || 28;
-    ctxLocal.beginPath();
-    ctxLocal.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2);
-    ctxLocal.fill();
-    ctxLocal.fillStyle = '#000';
-    ctxLocal.font = '12px sans-serif';
-    ctxLocal.fillText(Math.round(p.vida || 0), s + 4, 12);
-    ctxLocal.restore();
-  }
-}
-
+server.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
