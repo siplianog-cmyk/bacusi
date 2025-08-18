@@ -5,6 +5,32 @@
   <title>Jogo de Sobrevivência JS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <style>
+    /* ADICIONADO: Estilos para Mobile */
+body.mobile {
+  /* Estilos para a interface mobile */
+}
+#hud-panel {
+  /* AJUSTADO: max-width para melhor visualização em celular */
+  max-width: 90vw;
+}
+/* ADICIONADO: Regra para telas menores */
+@media (max-width: 768px) {
+  #hud-panel {
+    font-size: 1.2em;
+    padding: 10px 16px;
+    min-width: unset;
+    width: 90vw;
+  }
+}
+/* NOVO: classes para mostrar/esconder elementos */
+.mobile-only { display: none; }
+.mobile .mobile-only { display: block; }
+.desktop-only { display: block; }
+.mobile .desktop-only { display: none; }
+/* aumentar HUD no mobile */
+.mobile #hud-panel { font-size: 1.2em; padding: 10px 16px; }
+
+
     html, body {
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
@@ -152,7 +178,7 @@
   <div id="hotbar"></div>
 
   <!-- HOTBAR MOBILE (ADICIONADO) -->
-  <div id="mobile-hotbar"></div>
+  <div id="mobile-hotbar" class="mobile-only"></div>
 
   <canvas id="game"></canvas>
   <canvas id="dayTransition"></canvas>
@@ -161,7 +187,7 @@
   <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
 
   <!-- CONTROLES MOBILE (ADICIONADO) -->
-  <div id="mobile-controls">
+  <div id="mobile-controls" class="mobile-only"></div>>
     <div class="dpad">
       <div></div>
       <button id="btn-up">▲</button>
@@ -174,7 +200,7 @@
       <div></div>
     </div>
   </div>
-  <div id="action-buttons">
+  <div id="action-buttons" class="mobile-only">
     <button id="btn-attack">⚔️</button>
     <button id="btn-use">🎒</button>
   </div>
@@ -352,8 +378,21 @@
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
     let bombs = [];
+    let isMobile = false;
+
+
+    // ADICIONADO: Função para detectar celular
+function checkMobile() {
+    isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.body.classList.add('mobile');
+    } else {
+        document.body.classList.remove('mobile');
+    }
+}
 
     function resetGame() {
+    checkMobile();  //checa se é mobile
       player = { x: W()/2, y: H()/2, size: 40, speed: 4, blink: 0, vida: 5, armadura: false, invencivel: 0, id: selfId };
       keys = {};
       enemies = [];
@@ -515,6 +554,21 @@
       if (e.key === 'Enter') usarHotbar();
     }, {capture:true});
     document.addEventListener('keyup', e => keys[e.key] = false);
+
+// ADICIONADO: Listeners para os botões do D-Pad
+document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); keys.w = true; }, {passive: false});
+document.getElementById('btn-up').addEventListener('touchend', () => { keys.w = false; });
+document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); keys.a = true; }, {passive: false});
+document.getElementById('btn-left').addEventListener('touchend', () => { keys.a = false; });
+document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); keys.s = true; }, {passive: false});
+document.getElementById('btn-down').addEventListener('touchend', () => { keys.s = false; });
+document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); keys.d = true; }, {passive: false});
+document.getElementById('btn-right').addEventListener('touchend', () => { keys.d = false; });
+    
+// ADICIONADO: Botões de ação
+document.getElementById('btn-attack').addEventListener('touchstart', attackEnemy);
+document.getElementById('btn-use').addEventListener('touchstart', usarHotbarAtMouse);
+
 
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
