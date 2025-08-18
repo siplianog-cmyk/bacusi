@@ -374,6 +374,7 @@ body.mobile {
     window.addEventListener('resize', resetParticles);
 
     // JOGO
+    let isMobile = false;
     let player, keys, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
     let tutorialEnabled = false, tutorialStep = 0;
     let mouseWorld = { x:0, y:0 };
