@@ -1219,6 +1219,8 @@ function movePlayer() {
     }
 
     // ====== MULTIPLAYER (ADICIONADO) ======
+
+// Multiplayer
     const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
     let socket = null;
     let selfId = null;
@@ -1226,17 +1228,41 @@ function movePlayer() {
 
     try {
       socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
-      socket.on('connect', () => { selfId = socket.id; announceSelf(); });
-      socket.on('state', payload => {
-        // payload: { id, x, y, size, espada, picareta, superpicareta, armadura }
-        if (!payload || payload.id === selfId) return;
-        otherPlayers[payload.id] = { ...otherPlayers[payload.id], ...payload };
+
+      // Eventos do Socket.IO para o cliente
+      socket.on('connect', () => { 
+          selfId = socket.id;
+          console.log('Conectado ao servidor com ID:', selfId);
       });
-      socket.on('leave', id => { delete otherPlayers[id]; });
+
+      socket.on('currentPlayers', (players) => {
+        for (let id in players) {
+          if (id !== socket.id) {
+            otherPlayers[id] = players[id];
+          }
+        }
+      });
+
+      socket.on('newPlayer', (newPlayer) => {
+        otherPlayers[newPlayer.id] = newPlayer;
+      });
+
+      socket.on('playerDisconnected', (playerId) => {
+        delete otherPlayers[playerId];
+      });
+
+      socket.on('playerMoved', (playerData) => {
+        if(otherPlayers[playerData.id]) {
+          otherPlayers[playerData.id].x = playerData.x;
+          otherPlayers[playerData.id].y = playerData.y;
+        }
+      });
+
     } catch (e) {
       console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
     }
 
+    // Funções para comunicação com o servidor
     function announceSelf() {
       if (!socket || !socket.connected) return;
       socket.emit('join', { id: selfId });
@@ -1245,7 +1271,7 @@ function movePlayer() {
     function throttleSendState() {
       const now = performance.now();
       if (!socket || !socket.connected) return;
-      if (now - lastSend < 80) return; // ~12.5 fps de rede
+      if (now - lastSend < 80) return;
       lastSend = now;
       socket.emit('state', {
         id: selfId,
