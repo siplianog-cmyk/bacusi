@@ -223,6 +223,19 @@ const actionButtons = document.getElementById('action-buttons');
     const ctx = canvas.getContext('2d');
     const W = () => canvas.width, H = () => canvas.height;
 
+    // Objeto para rastrear o estado das teclas pressionadas
+const keyboard = {};
+
+// Event listeners para rastrear o estado das teclas
+document.addEventListener('keydown', (e) => {
+  keyboard[e.key] = true;
+});
+
+document.addEventListener('keyup', (e) => {
+  keyboard[e.key] = false;
+});
+
+
     // HUD
     const timerSpan = document.getElementById('timer');
     const vidaSpan = document.getElementById('vida');
@@ -469,6 +482,20 @@ socket.on('state', payload => {
         pocao: 0,
         superpicareta: false
       };
+        player = { 
+        x: MAPA_LARGURA / 2, // Começa o jogador no centro do mapa
+        y: MAPA_ALTURA / 2, 
+        size: 40, 
+        speed: 4, 
+        blink: 0, 
+        vida: 5, 
+        armadura: false, 
+        invencivel: 0, 
+        id: selfId 
+  };
+      camera.x = player.x - W() / 2; 
+      camera.y = player.y - H() / 2; 
+      dayTransitionActive = false;
       isDay = true;
       dayLength = 14;
       buildMode = null;
@@ -843,11 +870,6 @@ function movePlayer() {
   if ((keys['ArrowLeft'] || keys['a']) && player.x > 0) { player.x -= vel; moved = true; }
   if ((keys['ArrowRight'] || keys['d']) && player.x < MAPA_LARGURA - player.size) { player.x += vel; moved = true; }
   if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
-
-  // Se o jogador se moveu, enviamos a nova posição para o servidor
-  if (moved) {
-      socket.emit('playerMovement', { x: player.x, y: player.y });
-  }
 }
 
     function updateCamera() {
@@ -1318,6 +1340,7 @@ function drawEnemies() {
     function gameLoop(now) {
       if (!startTime) startTime = now;
       if (running && !paused) {
+        let moved = false; 
         elapsed = (now - startTime) / 1000;
         timerSpan.textContent = elapsed.toFixed(1);
         dias = Math.floor(elapsed / (dayLength*2)) + 1;
@@ -1373,14 +1396,27 @@ function drawEnemies() {
         if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
         if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
 
-        // multiplayer: enviar posição batida
+  if (keyboard.ArrowUp || keyboard.w || keyboard.k) {
+    player.y -= player.speed;
+    moved = true;
+  }
 
-        throttleSendState();
-        
+// Se o jogador se moveu, enviamos a nova posição para o servidor
+if (moved && socket && socket.connected) {
+  socket.emit('playerState', {
+    x: player.x,
+    y: player.y,
+    vida: player.vida,
+    armadura: inventory.armadura,
+    espada: inventory.espada,
+    picareta: inventory.picareta,
+    // Adicione outras propriedades importantes aqui
+  });
+}
 
+throttleSendState(); // Mantenha isso se o throttle for para outra coisa, mas é redundante. O ideal é usar o `throttleSendState` para tudo.
 
-
-        requestAnimationFrame(gameLoop);
+requestAnimationFrame(gameLoop);
       } else if (!running) {
         timerSpan.textContent = elapsed.toFixed(1);
         ctx.save();
