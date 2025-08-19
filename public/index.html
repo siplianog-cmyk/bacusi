@@ -7,18 +7,18 @@
 <style>
     /* AJUSTES PARA MOBILE */
     /* Garante que o HUD e a hotbar se adaptem a telas menores */
-    @media (max-width: 768px) {
-        #hud-panel {
-            font-size: 1.2em;
-            padding: 10px 16px;
-            min-width: unset;
-            width: 90vw;
-        }
-        #hotbar { display: none; } /* Esconde hotbar de desktop em telas pequenas */
-        #mobile-hotbar { display: flex; } /* Mostra a hotbar móvel */
-        #mobile-controls { display: block; } /* Mostra os controles móveis */
-        #action-buttons { display: flex; } /* Mostra os botões de ação móveis */
+@media (max-width: 768px) {
+    #hud-panel {
+        font-size: 1.2em;
+        padding: 10px 16px;
+        min-width: unset;
+        width: 90vw;
     }
+    #hotbar { display: none; }
+    #mobile-hotbar { display: flex; }
+    #mobile-controls { display: block; }
+    #action-buttons { display: flex; }
+}
 
     /* As classes desktop-only e mobile-only não são mais necessárias com as @media queries */
     .mobile .desktop-only { display: none; }
@@ -180,23 +180,21 @@
   <div id="tutorialBox"></div>
   <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
 
-  <div id="mobile-controls" class="mobile-only">
-    <div class="dpad">
-      <div></div>
-      <button id="up-btn">▲</button>
-      <div></div>
-      <button id="left-btn">◀</button>
-      <div></div>
-      <button id="right-btn">▶</button>
-      <div></div>
-      <button id="down-btn">▼</button>
-      <div></div>
+<div id="mobile-controls">
+    <div id="dpad">
+        <div id="btn-up" class="dpad-btn">▲</div>
+        <div id="dpad-middle">
+            <div id="btn-left" class="dpad-btn">◄</div>
+            <div id="btn-right" class="dpad-btn">►</div>
+        </div>
+        <div id="btn-down" class="dpad-btn">▼</div>
     </div>
-  </div>
-  <div id="action-buttons" class="mobile-only">
-    <button id="action-btn">⚔️</button>
+</div>
+
+<div id="action-buttons">
+    <button id="btn-attack">⚔️</button>
     <button id="btn-use">🎒</button>
-  </div>
+</div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 
@@ -1339,6 +1337,52 @@ function drawEnemies() {
     }
 }
 
+// Funções para manipulação de eventos de toque
+function bindTouch(buttonId, keyName) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        button.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys[keyName] = true;
+        }, { passive: false });
+
+        button.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys[keyName] = false;
+        }, { passive: false });
+    }
+}
+
+// Vincula os botões do D-pad às teclas correspondentes
+bindTouch('btn-up', 'ArrowUp');
+bindTouch('btn-down', 'ArrowDown');
+bindTouch('btn-left', 'ArrowLeft');
+bindTouch('btn-right', 'ArrowRight');
+
+// Eventos para os botões de ação
+document.getElementById('btn-attack')?.addEventListener('touchstart', e => { e.preventDefault(); attackEnemy(); }, { passive: false });
+document.getElementById('btn-use')?.addEventListener('touchstart', e => { e.preventDefault(); usarHotbar(); }, { passive: false });
+
+// Toque no canvas = mover cursor e acionar construção/uso
+function updateMouseFromTouch(touch) {
+    const rect = canvas.getBoundingClientRect();
+    mouseWorld.x = touch.clientX - rect.left + camera.x;
+    mouseWorld.y = touch.clientY - rect.top + camera.y;
+}
+canvas.addEventListener('touchstart', e=> {
+    if (!isMobileDevice) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    updateMouseFromTouch(t);
+    // comportamento: se em modo construção, constrói; senão usa item (ou ataca se espada)
+    if (buildMode) buildAt(mouseWorld.x, mouseWorld.y); else usarHotbarAtMouse();
+}, {passive:false});
+canvas.addEventListener('touchmove', e=> {
+    if (!isMobileDevice) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    updateMouseFromTouch(t);
+}, {passive:false});
 
     function gameLoop(now) {
       if (!startTime) startTime = now;
