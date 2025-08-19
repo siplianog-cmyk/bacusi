@@ -359,7 +359,7 @@ socket.on('state', payload => {
 
 
   // Mapeia os botões móveis para as teclas do jogo
-  document.getElementById('up-btn').addEventListener('touchstart', () => { keys.w = true; });
+  document.getElementById('btn-up').addEventListener('touchstart', () => { keys.w = true; });
   document.getElementById('up-btn').addEventListener('touchend', () => { keys.w = false; });
 
   document.getElementById('down-btn').addEventListener('touchstart', () => { keys.s = true; });
