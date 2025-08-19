@@ -298,19 +298,22 @@ function announceSelf() {
 let lastSentState = 0;
 const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
 
+// Função para enviar o estado do jogador ao servidor de forma otimizada
 function throttleSendState() {
-  const now = performance.now();
-  if (now - lastSentState > STATE_SEND_INTERVAL) {
-    if (socket && socket.connected) {
+  if (socket && socket.connected) {
+    // A função movePlayer() já define a variável `moved` para true, mas a declaração precisa estar fora.
+    const moved = movePlayer();
+
+    if (moved) {
       socket.emit('playerState', {
-        id: player.id,
         x: player.x,
         y: player.y,
         vida: player.vida,
-        // Inclua outros dados relevantes como isAttacking, item hotbar, etc.
+        armadura: inventory.armadura,
+        espada: inventory.espada,
+        picareta: inventory.picareta,
       });
     }
-    lastSentState = now;
   }
 }
 
@@ -1352,7 +1355,6 @@ function drawEnemies() {
         }
         if (!montanhaLiberada && dias >= 1000) montanhaLiberada = true;
         isDay = Math.floor(elapsed / dayLength) % 2 === 0;
-        movePlayer();
         updateCamera();
         moveEnemies();
         checkCollision();
@@ -1414,7 +1416,7 @@ if (moved && socket && socket.connected) {
   });
 }
 
-throttleSendState(); // Mantenha isso se o throttle for para outra coisa, mas é redundante. O ideal é usar o `throttleSendState` para tudo.
+throttleSendState(); 
 
 requestAnimationFrame(gameLoop);
       } else if (!running) {
