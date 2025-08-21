@@ -36,7 +36,7 @@
         text-shadow: 2px 2px 12px #000;
         color: #ffe066;
     }
-    .overlay-menu button, .overlay-menu input[type="range"] {
+    .overlay-menu button, .overlay-menu input[type="range"], .overlay-menu select {
         padding: 12px 36px;
         font-size: 1.5em;
         border-radius: 12px;
@@ -56,97 +56,94 @@
     /* HUD */
     #hud-panel {
       position: absolute;
-      top: 12px; left: 50%; transform: translateX(-50%);
+      top: 10px; left: 50%; transform: translateX(-50%);
       background: rgba(40,40,60,0.85);
-      border-radius: 18px;
-      box-shadow: 0 4px 24px #000a;
-      padding: 8px 24px 4px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px #000a;
+      padding: 6px 16px 4px 16px;
       color: #fff;
-      font-size: 1.1em;
+      font-size: 0.8em;
       text-align: left;
       text-shadow: 1px 1px 4px #000;
       z-index: 10;
-      min-width: 320px;
+      min-width: 280px;
       max-width: 90vw;
       pointer-events: none;
       transition: opacity 0.3s;
     }
-    #hud-panel.hide { opacity: 0; }
-    #info { font-size: 1.1em; }
     
     /* Hotbar estilo Minecraft */
     #hotbar {
         position: absolute;
-        bottom: 30px;
+        bottom: 15px;
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 8px;
+        gap: 6px;
         z-index: 10;
         user-select: none;
     }
     .slot {
-        width: 60px; height: 60px;
+        width: 50px; height: 50px;
         background: rgba(30,30,40,0.8);
-        border: 4px solid #444;
-        border-radius: 12px;
+        border: 3px solid #444;
+        border-radius: 10px;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.8em;
+        font-size: 1.5em;
         transition: transform 0.1s, border-color 0.1s;
     }
     .slot.active {
         border-color: #ffe066;
         transform: scale(1.1);
-        box-shadow: 0 0 16px rgba(255, 224, 102, 0.7);
+        box-shadow: 0 0 12px rgba(255, 224, 102, 0.7);
     }
     .item-count {
         position: absolute;
         bottom: 2px; right: 4px;
-        font-size: 0.8em;
+        font-size: 0.7em;
         text-shadow: 1px 1px 2px #000;
     }
     
     /* Botões flutuantes para mobile */
     #action-buttons {
         position: absolute;
-        right: 20px;
-        bottom: 120px;
-        display: none; /* Inicia oculto, mostra com media query */
+        right: 10px;
+        bottom: 100px;
+        display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
         z-index: 100;
     }
     #action-buttons button {
-        width: 70px; height: 70px;
+        width: 60px; height: 60px;
         border-radius: 50%;
         border: none;
         background: rgba(255,255,255,.3);
         color: #000;
-        font-size: 1.8em;
+        font-size: 1.6em;
         font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5);
     }
-
     #options-btn {
         position: absolute;
-        top: 20px; right: 20px;
-        width: 48px; height: 48px;
+        top: 15px; right: 15px;
+        width: 40px; height: 40px;
         background: rgba(255,255,255,0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.8em;
+        font-size: 1.6em;
         cursor: pointer;
         z-index: 20;
     }
     
     /* Visuais */
-    .heart { color: #ff5252; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #f00; }
-    .armor { color: #b0c4de; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #09f; }
+    .heart { color: #ff5252; font-size: 1em; text-shadow: 0 0 4px #fff, 0 0 1px #f00; }
+    .armor { color: #b0c4de; font-size: 1em; text-shadow: 0 0 4px #fff, 0 0 1px #09f; }
     #pauseOverlay {
       position: absolute;
       left: 0; top: 0; width: 100vw; height: 100vh;
@@ -175,9 +172,9 @@
     /* Joystick */
     #joystick-area {
         position: absolute;
-        bottom: 50px; left: 50px;
-        width: 120px; height: 120px;
-        display: none; /* Inicia oculto, mostra com media query */
+        bottom: 40px; left: 40px;
+        width: 100px; height: 100px;
+        display: block;
         touch-action: none;
         z-index: 100;
     }
@@ -191,18 +188,10 @@
         position: absolute;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        width: 60px; height: 60px;
+        width: 50px; height: 50px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.4);
     }
-
-    /* Media Queries para Mobile */
-    @media (max-width: 768px) {
-        #action-buttons { display: flex; }
-        #joystick-area { display: block; }
-        #hotbar { display: none; }
-    }
-    
     .option-label {
         font-size: 1em;
         margin-top: 16px;
@@ -224,7 +213,27 @@
         <input type="checkbox" id="multiplayer-toggle" checked>
         <span class="slider"></span>
       </label>
+      <button id="btn-game-options">Opções de Jogo</button>
       <button id="btn-resume">Continuar</button>
+  </div>
+  
+  <div id="game-options-menu" class="overlay-menu" style="display: none;">
+      <h1>Configurações de Jogo</h1>
+      <p class="option-label">Tamanho da HUD:</p>
+      <input type="range" id="hud-size-slider" min="0.5" max="2" step="0.1" value="1">
+      <p class="option-label">Tamanho dos Botões:</p>
+      <input type="range" id="btn-size-slider" min="0.5" max="2" step="0.1" value="1">
+      <p class="option-label">Tamanho do Joystick:</p>
+      <input type="range" id="joystick-size-slider" min="0.5" max="2" step="0.1" value="1">
+      <p class="option-label">Posição do Joystick (Horizontal):</p>
+      <input type="range" id="joystick-x-slider" min="10" max="90" step="1" value="20">
+      <p class="option-label">Posição do Joystick (Vertical):</p>
+      <input type="range" id="joystick-y-slider" min="10" max="90" step="1" value="80">
+      <p class="option-label">Posição dos Botões (Horizontal):</p>
+      <input type="range" id="btn-x-slider" min="10" max="90" step="1" value="85">
+      <p class="option-label">Posição dos Botões (Vertical):</p>
+      <input type="range" id="btn-y-slider" min="10" max="90" step="1" value="80">
+      <button id="btn-back-options">Voltar</button>
   </div>
 
   <div id="game-container">
@@ -263,9 +272,12 @@
 
     const startMenu = document.getElementById('start-menu');
     const optionsMenu = document.getElementById('options-menu');
+    const gameOptionsMenu = document.getElementById('game-options-menu');
     const gameContainer = document.getElementById('game-container');
     const btnStart = document.getElementById('btn-start');
     const btnResume = document.getElementById('btn-resume');
+    const btnGameOptions = document.getElementById('btn-game-options');
+    const btnBackOptions = document.getElementById('btn-back-options');
     const optionsBtn = document.getElementById('options-btn');
     const btnAction = document.getElementById('btn-action');
     const btnCreate = document.getElementById('btn-create');
@@ -274,6 +286,13 @@
     const joystickStick = document.getElementById('joystick-stick');
     const volumeSlider = document.getElementById('volume-slider');
     const multiplayerToggle = document.getElementById('multiplayer-toggle');
+    const hudSizeSlider = document.getElementById('hud-size-slider');
+    const btnSizeSlider = document.getElementById('btn-size-slider');
+    const joystickSizeSlider = document.getElementById('joystick-size-slider');
+    const joystickXSlider = document.getElementById('joystick-x-slider');
+    const joystickYSlider = document.getElementById('joystick-y-slider');
+    const btnXSlider = document.getElementById('btn-x-slider');
+    const btnYSlider = document.getElementById('btn-y-slider');
     
     const MAPA_LARGURA = 2400;
     const MAPA_ALTURA = 1200;
@@ -283,13 +302,29 @@
     const canvas = document.getElementById('game');
     let ctx = null;
 
-    // SONS
-    const sounds = {
-        click: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
-        collect: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'),
-        attack: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'),
-        damage: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'),
+    // SONS e MÚSICAS
+    const soundUrls = {
+      click: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/click.mp3',
+      collect: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/pickup.mp3',
+      attack: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/sword.mp3',
+      damage: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/damage.mp3',
+      explosion: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/explosion.mp3',
+      step: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/step.mp3',
     };
+
+    const musicUrls = [
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm1.mp3',
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm2.mp3',
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm3.mp3',
+    ];
+
+    const sounds = {};
+    let currentMusic = null;
+    let musicIndex = 0;
+    
+    for (const key in soundUrls) {
+        sounds[key] = new Audio(soundUrls[key]);
+    }
     
     function playSound(soundName) {
         if (sounds[soundName]) {
@@ -298,9 +333,26 @@
         }
     }
     
+    function playNextMusic() {
+        if (currentMusic) {
+            currentMusic.pause();
+            currentMusic.currentTime = 0;
+        }
+        
+        musicIndex = (musicIndex + 1) % musicUrls.length;
+        currentMusic = new Audio(musicUrls[musicIndex]);
+        currentMusic.volume = volumeSlider.value;
+        currentMusic.loop = false;
+        currentMusic.onended = playNextMusic;
+        currentMusic.play().catch(e => console.log("Erro ao tocar música:", e));
+    }
+    
     volumeSlider.addEventListener('input', (e) => {
         for (let sound in sounds) {
             sounds[sound].volume = e.target.value;
+        }
+        if (currentMusic) {
+            currentMusic.volume = e.target.value;
         }
     });
 
@@ -355,7 +407,7 @@
       { id: 'pedra', nome: 'Pedra', emoji: '🪨' }
     ];
     let hotbarSelecionado = 0;
-
+    
     // Multiplayer
     const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
     let socket = null;
@@ -382,7 +434,6 @@
 
         socket.on('disconnect', () => {
             console.log('Desconectado do servidor.');
-            // Limpa outros jogadores para evitar fantasmas
             for (const id in otherPlayers) {
                 delete otherPlayers[id];
             }
@@ -555,8 +606,7 @@
         pocao: 0,
         superpicareta: false
       };
-      camera.x = player.x - W() / 2; 
-      camera.y = player.y - H() / 2; 
+      
       dayTransitionActive = false;
       isDay = true;
       dayLength = 14;
@@ -565,8 +615,7 @@
       lastDay = 1;
       montanhaLiberada = false;
       florestaDesbloqueada = false;
-      camera.x = 0; camera.y = 0;
-      dayTransitionActive = false;
+      
       renderHotbar();
       updateInventory();
       updateCrafting();
@@ -579,20 +628,26 @@
 
       announceSelf();
       requestAnimationFrame(gameLoop);
+      if (currentMusic) { currentMusic.pause(); }
+      playNextMusic();
     }
 
     function setPause(val) {
       paused = val;
       pauseOverlay.style.display = paused ? 'flex' : 'none';
       if (!paused && !dayTransitionActive) requestAnimationFrame(gameLoop);
+      if (currentMusic) {
+        if (paused) currentMusic.pause();
+        else currentMusic.play();
+      }
     }
     
     // Controles e Eventos
     document.addEventListener('keydown', e => {
       const key = e.key.toLowerCase();
-      if (paused && key !== 'p') return;
+      if (paused && key !== 'p' && key !== 'escape') return;
       keyboard[key] = true;
-      if (key === 'p') { setPause(!paused); }
+      if (key === 'p' || key === 'escape') { setPause(!paused); }
       if (key >= '1' && key <= '9') { hotbarSelecionado = parseInt(key)-1; renderHotbar(); }
       if (key === '0') { hotbarSelecionado = 9; renderHotbar(); }
       if (key === ' ') attackEnemy();
@@ -620,16 +675,15 @@
 
     canvas.addEventListener('mousedown', e => {
       e.preventDefault();
-      if (e.button === 0) { // Botão esquerdo do mouse
+      if (e.button === 0) {
         const item = hotbarItens[hotbarSelecionado].id;
         if (item === 'espada') {
           attackEnemy();
         } else if (item === 'maca') {
           usarMaca();
-        } else if (item === 'picareta') {
+        } else if (item === 'picareta' || item === 'superpicareta') {
           usePickaxeAt(mouseWorld.x, mouseWorld.y);
         } else {
-          // Itens de construção, como paredes ou tochas
           buildAt(mouseWorld.x, mouseWorld.y);
         }
       }
@@ -644,6 +698,7 @@
     const joystickMaxRadius = joystickBase.clientWidth / 2;
     joystickArea.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        if (joystickTouchId !== null) return;
         const t = e.changedTouches[0];
         joystickTouchId = t.identifier;
     }, { passive: false });
@@ -714,20 +769,59 @@
         hudPanel.style.display = 'block';
         setPause(false);
     };
+    btnGameOptions.onclick = () => {
+        playSound('click');
+        optionsMenu.style.display = 'none';
+        gameOptionsMenu.style.display = 'flex';
+    };
+    btnBackOptions.onclick = () => {
+        playSound('click');
+        gameOptionsMenu.style.display = 'none';
+        optionsMenu.style.display = 'flex';
+    };
+
+    // Opções de Jogo
+    function applyGameOptions() {
+        hudPanel.style.transform = `scale(${hudSizeSlider.value}) translateX(-50%)`;
+        hudPanel.style.transformOrigin = 'top center';
+        btnAction.style.width = btnAction.style.height = `${btnSizeSlider.value * 60}px`;
+        btnCreate.style.width = btnCreate.style.height = `${btnSizeSlider.value * 60}px`;
+        joystickArea.style.width = joystickArea.style.height = `${joystickSizeSlider.value * 100}px`;
+        joystickBase.style.width = joystickBase.style.height = '100%';
+        joystickStick.style.width = joystickStick.style.height = `${joystickSizeSlider.value * 50}px`;
+        joystickArea.style.left = `${joystickXSlider.value}%`;
+        joystickArea.style.bottom = `${100 - joystickYSlider.value}%`;
+        btnXSlider.value = btnXSlider.value;
+        btnYSlider.value = btnYSlider.value;
+        btnYSlider.value = btnYSlider.value;
+        btnAction.parentNode.style.right = `${100 - btnXSlider.value}%`;
+        btnAction.parentNode.style.bottom = `${100 - btnYSlider.value}%`;
+    }
+    
+    hudSizeSlider.addEventListener('input', applyGameOptions);
+    btnSizeSlider.addEventListener('input', applyGameOptions);
+    joystickSizeSlider.addEventListener('input', applyGameOptions);
+    joystickXSlider.addEventListener('input', applyGameOptions);
+    joystickYSlider.addEventListener('input', applyGameOptions);
+    btnXSlider.addEventListener('input', applyGameOptions);
+    btnYSlider.addEventListener('input', applyGameOptions);
+    
+    // Inicia com as configurações padrão
+    applyGameOptions();
 
     function updateInventory() {
         const invDiv = document.getElementById('inv');
-        let txt = `<span style="font-size: 14px;">🌲 Madeira: ${inventory.madeira} | 🪨 Pedra: ${inventory.pedra} | 🍎 Maçã: ${inventory.maca} | 💣 Bomba: ${inventory.bomba}</span>`;
+        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba}</span>`;
         invDiv.innerHTML = txt;
         renderHotbar();
     }
     
     function updateCrafting() {
       const craftDiv = document.getElementById('craft');
-      let txt = `<b>Modo Construção:</b> `;
-      const item = hotbarItens[hotbarSelecionado];
-      if (item && item.id === buildMode) {
-          txt += `${item.emoji} ${item.nome}`;
+      let txt = `<b>Construção:</b> `;
+      const item = hotbarItens[hotbarSelecionado].id;
+      if (item === buildMode) {
+          txt += `${hotbarItens.find(i=>i.id===item).emoji} ${hotbarItens.find(i=>i.id===item).nome}`;
       } else {
           txt += '<span style="color:#aaa">Nenhum</span>';
       }
@@ -861,7 +955,6 @@
         bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.bomba--; updateInventory();
         buildMode = null;
       } else {
-        // Nada para construir ou item selecionado errado.
         buildMode = null;
       }
       updateCrafting();
@@ -907,7 +1000,7 @@
     function movePlayer() {
       let vel = player.speed;
       let moved = false;
-      if (florestaDesbloqueada && player.x > W()-100) vel = player.speed * 0.55;
+      if (florestaDesbloqueada && player.x > MAPA_LARGURA * 0.4) vel = player.speed * 0.55;
       if (keyboard['arrowup'] || keyboard['w']) { player.y -= vel; moved = true; }
       if (keyboard['arrowdown'] || keyboard['s']) { player.y += vel; moved = true; }
       if (keyboard['arrowleft'] || keyboard['a']) { player.x -= vel; moved = true; }
@@ -917,16 +1010,13 @@
       if (player.x > MAPA_LARGURA - player.size) player.x = MAPA_LARGURA - player.size;
       if (player.y < 0) player.y = 0;
       if (player.y > MAPA_ALTURA - player.size) player.y = MAPA_ALTURA - player.size;
+      if (moved && Math.floor(performance.now() / 150) % 2 === 0) playSound('step');
       return moved;
     }
     
     function updateCamera() {
-      if (florestaDesbloqueada && player.x > W()-100) {
-        camera.x = Math.max(0, Math.min(player.x - W()/2 + player.size/2, MAPA_LARGURA - W()));
-      } else {
-        camera.x = 0;
-      }
-      camera.y = Math.max(0, Math.min(player.y - H()/2 + player.size/2, MAPA_ALTURA - H()));
+      camera.x = player.x - W()/2 + player.size/2;
+      camera.y = player.y - H()/2 + player.size/2;
     }
     
     function moveEnemies() {
@@ -966,7 +1056,7 @@
         }
       }
       for (let g of gems) {
-        if (!g.collected && player.x < g.x + g.size && player.x + player.size > g.x && player.y < g.y + g.size && player.y + player.size > g.y) {
+        if (!g.collected && player.x < g.x + g.size && player.x + player.size > g.x && player.y < g.y + g.size && player.y + g.size > g.y) {
           playSound('collect');
           inventory.gema++; g.collected = true; updateInventory();
         }
@@ -980,6 +1070,7 @@
             e.explodindo = true;
             setTimeout(()=>{
               if (!running) return;
+              playSound('explosion');
               player.vida -= e.dano;
               updateVida();
               e.alive = false;
@@ -1329,6 +1420,7 @@
           const b = bombs[i];
           b.timer -= (1000/60);
           if (b.timer <= 0) {
+            playSound('explosion');
             const ex = b.x + b.size/2, ey = b.y + b.size/2;
             const r = 120;
             for (let j = enemies.length-1; j >= 0; j--) {
@@ -1378,6 +1470,7 @@
         ctx.font = '24px Arial';
         ctx.fillText('Tempo: ' + elapsed.toFixed(1) + ' s', W()/2, H()/2+30);
         ctx.restore();
+        if (currentMusic) { currentMusic.pause(); }
       }
       if (paused) {
         drawBackground(now);
