@@ -408,11 +408,11 @@
         // Novo cálculo de zoom para mobile
         if (isMobile) {
             const aspect = window.innerWidth / window.innerHeight;
-            const targetAspect = 16 / 9; // Por exemplo
-            if (aspect > targetAspect) {
-                CAMERA_ZOOM = window.innerHeight / 720; // Ajusta o zoom pela altura
+            const gameAspect = MAPA_LARGURA / MAPA_ALTURA;
+            if (aspect > gameAspect) {
+              CAMERA_ZOOM = window.innerHeight / MAPA_ALTURA;
             } else {
-                CAMERA_ZOOM = window.innerWidth / 1280; // Ajusta o zoom pela largura
+              CAMERA_ZOOM = window.innerWidth / MAPA_LARGURA;
             }
         } else {
             CAMERA_ZOOM = 1;
@@ -1190,14 +1190,15 @@
     }
     
     function updateCamera() {
-      const targetX = player.x + player.size / 2;
-      const targetY = player.y + player.size / 2;
+      const targetX = player.x + player.size / 2 - W() / (2 * CAMERA_ZOOM);
+      const targetY = player.y + player.size / 2 - H() / (2 * CAMERA_ZOOM);
+      
+      const lerpFactor = 0.08;
+      camera.x += (targetX - camera.x) * lerpFactor;
+      camera.y += (targetY - camera.y) * lerpFactor;
       
       const visibleWidth = W() / CAMERA_ZOOM;
       const visibleHeight = H() / CAMERA_ZOOM;
-      
-      camera.x = targetX - visibleWidth / 2;
-      camera.y = targetY - visibleHeight / 2;
       
       camera.x = Math.max(0, Math.min(MAPA_LARGURA - visibleWidth, camera.x));
       camera.y = Math.max(0, Math.min(MAPA_ALTURA - visibleHeight, camera.y));
@@ -1733,6 +1734,7 @@
         drawBackground(now);
         
         ctx.save();
+        ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
         ctx.translate(-camera.x, -camera.y);
         drawWorld(now);
         ctx.restore();
@@ -1761,6 +1763,7 @@
       if (paused) {
         drawBackground(now);
         ctx.save();
+        ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
         ctx.translate(-camera.x, -camera.y);
         drawWorld(now);
         ctx.restore();
