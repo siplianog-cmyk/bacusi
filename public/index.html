@@ -222,6 +222,11 @@
           <h1>Opções</h1>
           <p class="option-label">Volume do Jogo:</p>
           <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
+          <p class="option-label">Multiplayer:</p>
+          <label class="switch" style="font-size:1.5em; margin-top:16px;">
+            <input type="checkbox" id="multiplayer-toggle">
+            <span class="slider"></span>
+          </label>
           <p class="option-label">Fundo do Jogo:</p>
           <select id="background-select" style="font-size:1.2em; padding:8px; margin-top:8px;">
             <option value="dynamic">Dinâmico</option>
@@ -301,6 +306,7 @@
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
     const volumeSlider = document.getElementById('volume-slider');
+    const multiplayerToggle = document.getElementById('multiplayer-toggle');
     const hudSizeSlider = document.getElementById('hud-size-slider');
     const btnSizeSlider = document.getElementById('btn-size-slider');
     const joystickSizeSlider = document.getElementById('joystick-size-slider');
@@ -327,21 +333,21 @@
 
     // SONS e MÚSICAS
     const soundUrls = {
-      click: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_510b65f726.mp3',
-      collect: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_9857d42551.mp3',
-      attack: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_596956241b.mp3',
-      damage: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_2d0d341999.mp3',
-      explosion: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_02c63f114c.mp3',
-      step: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_d0df472146.mp3',
-      potion: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_a1752b1239.mp3',
-      bow: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_b72b9845d0.mp3',
-      mine: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c3c3321591.mp3',
+      click: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/click.mp3',
+      collect: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/collect.mp3',
+      attack: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/attack.mp3',
+      damage: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/damage.mp3',
+      explosion: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/explosion.mp3',
+      step: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/step.mp3',
+      potion: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/potion.mp3',
+      bow: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/bow.mp3',
+      mine: 'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/sounds/mine.mp3',
     };
 
     const musicUrls = [
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7acb85055b.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_d4420e6c46.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7314743c7b.mp3',
+      'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/music/1.mp3',
+      'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/music/2.mp3',
+      'https://cdn.jsdelivr.net/gh/dev-lucca/game-assets@main/music/3.mp3',
     ];
 
     const sounds = {};
@@ -396,7 +402,18 @@
         if (!canvas) return;
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        CAMERA_ZOOM = 1; // Reseta o zoom
+        
+        // Novo cálculo de zoom para mobile
+        if (isMobile) {
+          const gameAspect = MAPA_LARGURA / MAPA_ALTURA;
+          const screenAspect = window.innerWidth / window.innerHeight;
+          // Zoom para preencher a tela sem distorcer, focando em manter a área de jogo visível
+          CAMERA_ZOOM = Math.min(window.innerWidth / MAPA_LARGURA, window.innerHeight / MAPA_ALTURA);
+          // Adiciona um pouco de zoom para que o jogador não seja minúsculo
+          CAMERA_ZOOM = Math.max(0.5, CAMERA_ZOOM);
+        } else {
+            CAMERA_ZOOM = 1;
+        }
     }
 
     const W = () => canvas.width;
@@ -437,6 +454,97 @@
     ];
     let hotbarSelecionado = 0;
     
+    // Multiplayer
+    let ws = null;
+    let isMultiplayerEnabled = false;
+    let otherPlayers = {};
+
+    multiplayerToggle.addEventListener('change', () => {
+        isMultiplayerEnabled = multiplayerToggle.checked;
+    });
+    
+    function setupMultiplayer() {
+        if (!isMultiplayerEnabled) {
+            if (ws) { ws.close(); ws = null; otherPlayers = {}; }
+            return;
+        }
+
+        if (ws) return;
+
+        ws = new WebSocket('ws://localhost:3000');
+        
+        ws.onopen = () => {
+            console.log('Conectado ao servidor WebSocket');
+            player.id = Date.now().toString(); // ID único para o jogador
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'playerUpdate') {
+                otherPlayers = data.players;
+                delete otherPlayers[player.id];
+            } else if (data.type === 'playerDisconnected') {
+                delete otherPlayers[data.id];
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Desconectado do servidor WebSocket');
+            ws = null;
+            otherPlayers = {};
+        };
+
+        ws.onerror = (error) => {
+            console.error('Erro no WebSocket:', error);
+        };
+    }
+    
+    function sendPlayerUpdate() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const playerState = {
+                id: player.id,
+                x: player.x,
+                y: player.y,
+                color: player.color,
+                vida: player.vida,
+                armadura: player.armadura,
+                attackModifier: player.attackModifier,
+                defenseModifier: player.defenseModifier,
+                speedModifier: player.speedModifier,
+                effectTimer: player.effectTimer,
+                invencivel: player.invencivel
+            };
+            ws.send(JSON.stringify({ type: 'playerUpdate', player: playerState }));
+        }
+    }
+
+
+    function renderHotbar() {
+      const hotbarElement = document.getElementById('hotbar');
+      if (!hotbarElement) return;
+      hotbarElement.innerHTML = '';
+      hotbarItens.forEach((item, i) => {
+        const slot = document.createElement('div');
+        slot.className = `slot`;
+        if (hotbarSelecionado === i) {
+          slot.classList.add('active');
+        }
+        slot.innerHTML = `<span>${item.emoji}</span>`;
+        if (inventory[item.id] !== undefined) {
+          const count = document.createElement('span');
+          count.className = 'item-count';
+          if (typeof inventory[item.id] === 'boolean') {
+            count.textContent = inventory[item.id] ? '✔️' : '';
+          } else {
+            count.textContent = inventory[item.id] > 0 ? inventory[item.id] : '';
+          }
+          slot.appendChild(count);
+        }
+        slot.onclick = () => { playSound('click'); hotbarSelecionado = i; renderHotbar(); };
+        hotbarElement.appendChild(slot);
+      });
+    }
+
     let particles = [];
     function resetParticles() {
       particles = [];
@@ -471,6 +579,7 @@
         vida: 5, 
         armadura: false, 
         invencivel: 0, 
+        id: null,
         color: colorPicker.value,
         attackModifier: 1,
         defenseModifier: 1,
@@ -531,6 +640,8 @@
       requestAnimationFrame(gameLoop);
       if (currentMusic) { currentMusic.pause(); }
       playNextMusic();
+      
+      setupMultiplayer();
     }
 
     function setPause(val) {
@@ -664,6 +775,8 @@
     };
     btnResume.onclick = () => {
         playSound('click');
+        isMultiplayerEnabled = multiplayerToggle.checked;
+        setupMultiplayer();
         optionsMenu.style.display = 'none';
         hudPanel.style.display = 'block';
         setPause(false);
@@ -1313,6 +1426,10 @@
           drawPlayerEntity(player);
       }
       
+      for(const id in otherPlayers) {
+          drawPlayerEntity(otherPlayers[id]);
+      }
+    
       for (let e of enemies) {
         if (!e.alive) continue;
         ctx.save();
@@ -1465,6 +1582,10 @@
         updateCamera();
         moveEnemies();
         checkCollision();
+        
+        if (isMultiplayerEnabled && ws && ws.readyState === WebSocket.OPEN) {
+            sendPlayerUpdate();
+        }
         
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
