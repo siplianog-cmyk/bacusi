@@ -237,13 +237,21 @@
     let florestaDesbloqueada = false;
     
     const canvas = document.getElementById('game');
+    let ctx;
+
+    function initCanvas() {
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+    }
+
     function resizeCanvas() {
+      if (!canvas) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    const ctx = canvas.getContext('2d');
+
     const W = () => canvas.width, H = () => canvas.height;
 
     const keyboard = {};
@@ -805,10 +813,10 @@ function updateInventory() {
     function spawnMaterials() {
       materials = [];
       for (let i = 0; i < 12; i++) {
-        materials.push({ x: Math.random() * (W()-60), y: Math.random() * (H()-60), size: 32, type: 'madeira' });
+        materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 32, type: 'madeira' });
       }
       for (let i = 0; i < 9; i++) {
-        materials.push({ x: Math.random() * (W()-60), y: Math.random() * (H()-60), size: 28, type: 'pedra' });
+        materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 28, type: 'pedra' });
       }
       if (florestaDesbloqueada) {
         for (let i = 0; i < 20; i++) {
@@ -820,7 +828,7 @@ function updateInventory() {
           });
         }
       }
-      apples = Math.random() < 0.6 ? [{ x: Math.random() * (W()-60), y: Math.random() * (H()-60), size: 24, collected: false }] : [];
+      apples = Math.random() < 0.6 ? [{ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 24, collected: false }] : [];
       gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false }] : [];
     }
 
@@ -913,6 +921,7 @@ function updateInventory() {
     }
 
     function drawBackground(now) {
+      if (!ctx) return;
       let t = (now/2000)%1;
       let grad = ctx.createLinearGradient(0, 0, W(), H());
       grad.addColorStop(0, isDay ? "#b6e07a" : "#2b3c5e");
@@ -937,6 +946,7 @@ function updateInventory() {
     }
 
     function drawWorld(now) {
+      if (!ctx) return;
       if (montanhaLiberada) {
         ctx.save();
         ctx.globalAlpha = 0.9;
@@ -1097,7 +1107,9 @@ function updateInventory() {
         ctx.restore();
       }
 
-      drawPlayerEntity(player, true);
+      if (player) {
+          drawPlayerEntity(player, true);
+      }
 
       for (const [id, p] of Object.entries(otherPlayers)) {
         if (!p) continue;
@@ -1138,6 +1150,7 @@ function updateInventory() {
     }
 
     function drawPlayerEntity(ent, isSelf) {
+      if (!ctx || !ent) return;
       ctx.save();
       ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
       ctx.shadowColor = isSelf ? "#00bfff" : "#00ff95";
@@ -1207,6 +1220,7 @@ function updateInventory() {
     }
 
     function gameLoop(now) {
+      if (!ctx) return;
       if (!startTime) startTime = now;
       if (running && !paused) {
         elapsed = (now - startTime) / 1000;
@@ -1388,7 +1402,11 @@ if (isMobileDevice) {
     }
   });
 
-    window.onload = () => { askTutorial(); resetGame(); };
+    window.onload = () => { 
+      initCanvas();
+      askTutorial();
+      resetGame();
+    };
     restartBtn.onclick = resetGame;
   </script>
 </body>
