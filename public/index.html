@@ -4,40 +4,54 @@
   <meta charset="UTF-8" />
   <title>Jogo de Sobrevivência JS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<style>
-    /* AJUSTES PARA MOBILE */
-    /* Garante que o HUD e a hotbar se adaptem a telas menores */
-@media (max-width: 768px) {
-    #hud-panel {
-        font-size: 1.2em;
-        padding: 10px 16px;
-        min-width: unset;
-        width: 90vw;
-    }
-    #hotbar { display: none; }
-    #mobile-hotbar { display: flex; }
-    #mobile-controls { display: block; }
-    #action-buttons { display: flex; }
-    #joystick-area { display: block; }
-}
-
-    /* As classes desktop-only e mobile-only não são mais necessárias com as @media queries */
-    .mobile .desktop-only { display: none; }
-    .mobile .mobile-only { display: block; }
-
-    /* Estilos globais do jogo */
+  <style>
+    /* Estilos globais */
     html, body {
         margin: 0; padding: 0;
         width: 100vw; height: 100vh;
         overflow: hidden;
         background: #222;
-    }
-    body {
         font-family: 'Segoe UI', Arial, sans-serif;
         background: linear-gradient(120deg, #2b5876 0%, #4e4376 100%);
         touch-action: none;
+        color: #fff;
     }
-
+    
+    /* Telas de Menu e Início */
+    .overlay-menu {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(18, 18, 30, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        text-align: center;
+        backdrop-filter: blur(8px);
+    }
+    .overlay-menu h1 {
+        font-size: 3em;
+        text-shadow: 2px 2px 12px #000;
+        color: #ffe066;
+    }
+    .overlay-menu button {
+        padding: 12px 36px;
+        font-size: 1.5em;
+        border-radius: 12px;
+        border: none;
+        background: #ffe066;
+        color: #222;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        transition: background 0.2s;
+        margin-top: 24px;
+    }
+    .overlay-menu button:hover { background: #fff176; }
+    
+    /* HUD */
     #hud-panel {
       position: absolute;
       top: 12px; left: 50%; transform: translateX(-50%);
@@ -57,41 +71,80 @@
     }
     #hud-panel.hide { opacity: 0; }
     #info { font-size: 1.1em; }
+    
+    /* Hotbar estilo Minecraft */
     #hotbar {
-      position: absolute;
-      left: 50%; bottom: 32px; transform: translateX(-50%);
-      display: flex; justify-content: center; gap: 8px;
-      user-select: none;
-      z-index: 10;
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+        user-select: none;
     }
-    #tutorialBox {
-      position: absolute;
-      left: 50%; top: 50%; transform: translate(-50%,-50%);
-      background: rgba(30,30,60,0.97);
-      color: #fff;
-      border-radius: 18px;
-      box-shadow: 0 4px 32px #000b;
-      padding: 32px 36px;
-      font-size: 1.3em;
-      max-width: 90vw;
-      z-index: 100;
-      display: none;
-      text-align: center;
+    .slot {
+        width: 60px; height: 60px;
+        background: rgba(30,30,40,0.8);
+        border: 4px solid #444;
+        border-radius: 12px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8em;
+        transition: transform 0.1s, border-color 0.1s;
     }
-    #tutorialBox button {
-      margin-top: 18px;
-      font-size: 1em;
-      padding: 8px 28px;
-      border-radius: 8px;
-      border: none;
-      background: #ffe066;
-      color: #222;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 8px #0007;
-      transition: background 0.2s;
+    .slot.active {
+        border-color: #ffe066;
+        transform: scale(1.1);
+        box-shadow: 0 0 16px rgba(255, 224, 102, 0.7);
     }
-    #tutorialBox button:hover { background: #fff176; }
+    .item-count {
+        position: absolute;
+        bottom: 2px; right: 4px;
+        font-size: 0.8em;
+        text-shadow: 1px 1px 2px #000;
+    }
+    
+    /* Botões flutuantes para mobile */
+    #action-buttons {
+        position: absolute;
+        right: 20px;
+        bottom: 120px;
+        display: none; /* Inicia oculto, mostra com media query */
+        flex-direction: column;
+        gap: 16px;
+        z-index: 100;
+    }
+    #action-buttons button {
+        width: 70px; height: 70px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,.3);
+        color: #000;
+        font-size: 1.8em;
+        font-weight: bold;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    #options-btn {
+        position: absolute;
+        top: 20px; right: 20px;
+        width: 48px; height: 48px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8em;
+        cursor: pointer;
+        z-index: 20;
+    }
+    
+    /* Visuais */
+    .heart { color: #ff5252; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #f00; }
+    .armor { color: #b0c4de; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #09f; }
     #pauseOverlay {
       position: absolute;
       left: 0; top: 0; width: 100vw; height: 100vh;
@@ -116,152 +169,132 @@
       margin: 0;
       z-index: 1;
     }
-    #dayTransition {
-      pointer-events: none;
-      position: fixed;
-      left: 0; top: 0; width: 100vw; height: 100vh;
-      z-index: 9999;
-      display: none;
-    }
-    .heart { color: #ff5252; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #f00; }
-    .armor { color: #b0c4de; font-size: 1.2em; text-shadow: 0 0 6px #fff, 0 0 2px #09f; }
 
-    /* ===== MOBILE UI (ADICIONADO) ===== */
-    #mobile-controls { position: absolute; left: 18px; bottom: 18px; z-index: 200; display: none; }
-    .dpad {
-      display: grid;
-      grid-template-columns: 68px 68px 68px;
-      grid-template-rows: 68px 68px 68px;
-      gap: 8px;
-      filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
-    }
-    .dpad button {
-      width: 68px; height: 68px; border-radius: 14px; border: none;
-      background: rgba(255,255,255,.18);
-      color: #fff; font-size: 1.4em; font-weight: 700;
-      backdrop-filter: blur(6px);
-    }
-    #action-buttons { position: absolute; right: 18px; bottom: 24px; display: none; flex-direction: column; gap: 12px; z-index: 200; }
-    #action-buttons button {
-      width: 78px; height: 78px; border-radius: 50%; border: none;
-      background: rgba(255,255,255,.28); color: #111; font-size: 2em; font-weight: 800;
-      backdrop-filter: blur(6px);
-      filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
-    }
-    #mobile-hotbar { position: absolute; left: 50%; bottom: 118px; transform: translateX(-50%); display: none; gap: 8px; z-index: 200; }
-    #mobile-hotbar .m-slot {
-      width:64px;height:64px;display:flex;align-items:center;justify-content:center;position:relative;
-      border-radius:10px;background:#2228;border:3px solid #444;box-shadow:0 2px 8px #000a;
-      font-size: 1.8em;color:#fff;
-    }
-    #mobile-hotbar .m-slot.active { border-color:#ffe066; box-shadow:0 0 14px #ffe066,0 2px 8px #000a; background:#222b; }
-
-    /* Estilos do joystick */
+    /* Joystick */
     #joystick-area {
         position: absolute;
-        bottom: 50px;
-        left: 50px;
-        width: 120px;
-        height: 120px;
-        display: none;
+        bottom: 50px; left: 50px;
+        width: 120px; height: 120px;
+        display: none; /* Inicia oculto, mostra com media query */
         touch-action: none;
+        z-index: 100;
     }
     #joystick-base {
-        width: 100%;
-        height: 100%;
+        width: 100%; height: 100%;
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.3);
         position: relative;
     }
     #joystick-stick {
         position: absolute;
-        top: 50%;
-        left: 50%;
+        top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        width: 60px;
-        height: 60px;
+        width: 60px; height: 60px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.4);
     }
 
-    /* aumentar HUD no mobile */
-    .mobile #hud-panel { font-size: 1.2em; padding: 10px 16px; }
+    /* Media Queries para Mobile */
+    @media (max-width: 768px) {
+        #action-buttons { display: flex; }
+        #joystick-area { display: block; }
+        #hotbar { display: none; }
+    }
   </style>
 </head>
 <body>
- <div id="hud-panel">
-    <div id="info">
-      <span id="timer">0.0</span> s &nbsp;|&nbsp; 
-      <span id="dias">Dia 1</span> &nbsp;|&nbsp;
-      <span class="heart" id="vida"></span>
-      <span class="armor" id="armadura"></span>
-    </div>
-    <div id="inv"></div>
-    <div id="craft"></div>
+  <div id="start-menu" class="overlay-menu">
+      <h1>Jogo de Sobrevivência</h1>
+      <button id="btn-start">Começar</button>
+  </div>
+  
+  <div id="options-menu" class="overlay-menu" style="display: none;">
+      <h1>Opções</h1>
+      <p>Nenhuma opção por enquanto.</p>
+      <button id="btn-resume">Continuar</button>
   </div>
 
-  <div id="hotbar" class="desktop-only"></div>
-
-  <div id="mobile-hotbar" class="mobile-only"></div>
-
-  <canvas id="game"></canvas>
-  <canvas id="dayTransition"></canvas>
-  <div id="pauseOverlay">PAUSADO</div>
-  <div id="tutorialBox"></div>
-  <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
-
-<div id="joystick-area" class="mobile-only">
-    <div id="joystick-base">
-        <div id="joystick-stick"></div>
+  <div id="game-container">
+    <div id="hud-panel">
+      <div id="info">
+        <span id="timer">0.0</span> s &nbsp;|&nbsp; 
+        <span id="dias">Dia 1</span> &nbsp;|&nbsp;
+        <span class="heart" id="vida"></span>
+        <span class="armor" id="armadura"></span>
+      </div>
+      <div id="inv"></div>
+      <div id="craft"></div>
     </div>
-</div>
-
-<div id="action-buttons" class="mobile-only">
-    <button id="btn-attack">⚔️</button>
-    <button id="btn-use">🎒</button>
-</div>
+  
+    <div id="hotbar"></div>
+  
+    <canvas id="game"></canvas>
+    <div id="pauseOverlay">PAUSADO</div>
+  
+    <div id="joystick-area">
+        <div id="joystick-base">
+            <div id="joystick-stick"></div>
+        </div>
+    </div>
+  
+    <div id="action-buttons">
+        <button id="btn-action">E</button>
+        <button id="btn-create">Q</button>
+    </div>
+    <button id="options-btn">⚙️</button>
+    <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
+  </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-
   <script>
 
-    const mobileControls = document.getElementById('mobile-controls');
-    const actionButtons = document.getElementById('action-buttons');
+    const startMenu = document.getElementById('start-menu');
+    const optionsMenu = document.getElementById('options-menu');
+    const gameContainer = document.getElementById('game-container');
+    const btnStart = document.getElementById('btn-start');
+    const btnResume = document.getElementById('btn-resume');
+    const optionsBtn = document.getElementById('options-btn');
+    const btnAction = document.getElementById('btn-action');
+    const btnCreate = document.getElementById('btn-create');
     const joystickArea = document.getElementById('joystick-area');
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
-
+    
     const MAPA_LARGURA = 2400;
     const MAPA_ALTURA = 1200;
     let camera = { x: 0, y: 0 };
     let florestaDesbloqueada = false;
     
     const canvas = document.getElementById('game');
-    let ctx;
+    let ctx = null;
 
     function initCanvas() {
-        if (!canvas) return;
+        if (!canvas) {
+            console.error('Canvas element not found.');
+            return;
+        }
         ctx = canvas.getContext('2d');
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
     }
 
     function resizeCanvas() {
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+        if (!canvas) return;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
 
-    const W = () => canvas.width, H = () => canvas.height;
+    const W = () => canvas.width;
+    const H = () => canvas.height;
 
     const keyboard = {};
 
     document.addEventListener('keydown', (e) => {
-      keyboard[e.key] = true;
+      keyboard[e.key.toLowerCase()] = true;
     });
 
     document.addEventListener('keyup', (e) => {
-      keyboard[e.key] = false;
+      keyboard[e.key.toLowerCase()] = false;
     });
 
     const timerSpan = document.getElementById('timer');
@@ -271,11 +304,8 @@
     const hudPanel = document.getElementById('hud-panel');
     const hotbarDiv = document.getElementById('hotbar');
     const pauseOverlay = document.getElementById('pauseOverlay');
-    const tutorialBox = document.getElementById('tutorialBox');
-    const invDiv = document.getElementById('inv');
-    const craftDiv = document.getElementById('craft');
     const restartBtn = document.getElementById('restart');
-
+    
     const hotbarItens = [
       { id: 'espada', nome: 'Espada', emoji: '⚔️' },
       { id: 'picareta', nome: 'Picareta', emoji: '⛏️' },
@@ -284,116 +314,134 @@
       { id: 'parede_madeira', nome: 'Parede Madeira', emoji: '🟫' },
       { id: 'parede_pedra', nome: 'Parede Pedra', emoji: '⬜' },
       { id: 'armadura', nome: 'Armadura', emoji: '🦺' },
+      { id: 'bomba', nome: 'Bomba', emoji: '💣' },
       { id: 'madeira', nome: 'Madeira', emoji: '🌲' },
-      { id: 'madeira_floresta', nome: 'Madeira Floresta', emoji: '🌳' },
-      { id: 'bomba', nome: 'Bomba', emoji: '💣' }
+      { id: 'pedra', nome: 'Pedra', emoji: '🪨' }
     ];
     let hotbarSelecionado = 0;
 
+    // Multiplayer
     const SOCKET_SERVER_URL = "https://bacusi-server.onrender.com";
     let socket = null;
     let selfId = null;
     const otherPlayers = {};
+    const isMultiplayerEnabled = true;
 
-    try {
-      socket = io(SOCKET_SERVER_URL, { transports: ['websocket'], autoConnect: true });
+    function connectSocket() {
+      if (!isMultiplayerEnabled) return;
+      if (socket && socket.connected) return;
 
-      socket.on('connect', () => { 
-          selfId = socket.id;
-          player.id = selfId;
-          console.log('Conectado ao servidor com ID:', selfId);
-          announceSelf();
-      });
+      try {
+        socket = io(SOCKET_SERVER_URL, { 
+            transports: ['websocket'], 
+            reconnectionAttempts: 5
+        });
 
-      function announceSelf() {
-          if (socket && socket.connected) {
-              socket.emit('playerState', {
-                  id: player.id,
-                  x: player.x,
-                  y: player.y,
-                  vida: player.vida,
-                  armadura: player.armadura,
-                  espada: inventory.espada,
-                  picareta: inventory.picareta
-              });
-          }
-      }
+        socket.on('connect', () => { 
+            selfId = socket.id;
+            player.id = selfId;
+            console.log('Conectado ao servidor com ID:', selfId);
+            announceSelf();
+        });
 
-      let lastSentState = 0;
-      const STATE_SEND_INTERVAL = 1000 / 20;
-
-      function throttleSendState() {
-        if (socket && socket.connected) {
-          const now = performance.now();
-          if (now - lastSentState > STATE_SEND_INTERVAL) {
-            socket.emit('playerState', {
-              x: player.x,
-              y: player.y,
-              vida: player.vida,
-              armadura: inventory.armadura,
-              espada: inventory.espada,
-              picareta: inventory.picareta,
-            });
-            lastSentState = now;
-          }
-        }
-      }
-
-      socket.on('currentPlayers', (players) => {
-        for (let id in players) {
-          if (id !== socket.id) {
-            otherPlayers[id] = players[id];
-          }
-        }
-      });
-
-      socket.on('newPlayer', (newPlayer) => {
-        otherPlayers[newPlayer.id] = newPlayer;
-      });
-
-      socket.on('playerDisconnected', (playerId) => {
-        delete otherPlayers[playerId];
-      });
-      
-      socket.on('state', payload => {
-        if (!payload) return;
+        socket.on('disconnect', () => {
+            console.log('Desconectado do servidor.');
+        });
         
-        for (const id in payload) {
-            if (id !== selfId) {
-                otherPlayers[id] = payload[id];
-            }
-        }
-      });
-      
-      socket.on('leave', id => { delete otherPlayers[id]; });
+        socket.on('connect_error', (err) => {
+            console.warn('Erro de conexão:', err);
+        });
 
-    } catch (e) {
-      console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
+        socket.on('currentPlayers', (players) => {
+            for (let id in players) {
+              if (id !== socket.id) {
+                otherPlayers[id] = players[id];
+              }
+            }
+        });
+
+        socket.on('newPlayer', (newPlayer) => {
+          otherPlayers[newPlayer.id] = newPlayer;
+        });
+
+        socket.on('playerDisconnected', (playerId) => {
+          delete otherPlayers[playerId];
+        });
+        
+        socket.on('state', payload => {
+          if (!payload) return;
+          for (const id in payload) {
+              if (id !== selfId) {
+                  otherPlayers[id] = payload[id];
+              }
+          }
+        });
+        
+        socket.on('leave', id => { delete otherPlayers[id]; });
+
+      } catch (e) {
+        console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
+      }
+    }
+
+    function announceSelf() {
+        if (socket && socket.connected) {
+            socket.emit('playerState', {
+                id: player.id,
+                x: player.x,
+                y: player.y,
+                vida: player.vida,
+                armadura: player.armadura,
+                espada: inventory.espada,
+                picareta: inventory.picareta
+            });
+        }
+    }
+
+    let lastSentState = 0;
+    const STATE_SEND_INTERVAL = 1000 / 20;
+
+    function throttleSendState() {
+      if (socket && socket.connected) {
+        const now = performance.now();
+        if (now - lastSentState > STATE_SEND_INTERVAL) {
+          socket.emit('playerState', {
+            x: player.x,
+            y: player.y,
+            vida: player.vida,
+            armadura: inventory.armadura,
+            espada: inventory.espada,
+            picareta: inventory.picareta,
+          });
+          lastSentState = now;
+        }
+      }
     }
 
     function renderHotbar() {
-      hotbarDiv.innerHTML = '';
-      for (let i = 0; i < 10; i++) {
-        const item = hotbarItens[i];
-        const qtdRaw = inventory[item.id];
-        let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
-        if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
+      const hotbarElement = document.getElementById('hotbar');
+      if (!hotbarElement) return;
+      hotbarElement.innerHTML = '';
+      hotbarItens.forEach((item, i) => {
         const slot = document.createElement('div');
-        slot.style.cssText = `
-          width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-          border-radius:8px;font-size:2em;box-shadow:0 2px 8px #000a;
-          border:3px solid ${hotbarSelecionado===i?'#ffe066':'#444'};
-          background:${hotbarSelecionado===i?'#222b':'#2228'};
-          cursor:pointer;position:relative;
-          transition:border 0.1s,background 0.1s;
-        `;
-        slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.7em;position:absolute;bottom:4px;right:8px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
-        if (hotbarSelecionado===i) slot.style.boxShadow = '0 0 16px #ffe066,0 2px 8px #000a';
-        slot.title = item.nome;
-        slot.onclick = ()=>{ hotbarSelecionado=i; renderHotbar(); renderMobileHotbar(); };
-        hotbarDiv.appendChild(slot);
-      }
-      renderMobileHotbar();
+        slot.className = `slot`;
+        if (hotbarSelecionado === i) {
+          slot.classList.add('active');
+        }
+        slot.innerHTML = `<span>${item.emoji}</span>`;
+        if (inventory[item.id] !== undefined) {
+          const count = document.createElement('span');
+          count.className = 'item-count';
+          if (typeof inventory[item.id] === 'boolean') {
+            count.textContent = inventory[item.id] ? '✔️' : '';
+          } else {
+            count.textContent = inventory[item.id] > 0 ? inventory[item.id] : '';
+          }
+          slot.appendChild(count);
+        }
+        slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); };
+        hotbarElement.appendChild(slot);
+      });
     }
 
     let particles = [];
@@ -413,29 +461,10 @@
     resetParticles();
     window.addEventListener('resize', resetParticles);
 
-    let player, keys, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
-    let tutorialEnabled = false, tutorialStep = 0;
-    let mouseWorld = { x:0, y:0 };
+    let player, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
     let bombs = [];
-    let isMovingWithJoystick = false;
-
-    function renderMobileHotbar() {
-        const mobileHotbar = document.getElementById('mobile-hotbar');
-        if (!mobileHotbar) return;
-        mobileHotbar.innerHTML = '';
-        hotbarItens.forEach((item, i) => {
-            const qtdRaw = inventory[item.id];
-            let qtd = (typeof qtdRaw === 'number' && qtdRaw > 0) ? qtdRaw : (qtdRaw === true ? '✔️' : '');
-            if (item.id === 'espada' || item.id === 'picareta' || item.id === 'armadura') qtd = inventory[item.id] ? '✔️' : '';
-            const slot = document.createElement('div');
-            slot.className = 'm-slot';
-            if (hotbarSelecionado === i) slot.classList.add('active');
-            slot.title = item.nome;
-            slot.innerHTML = `<span>${item.emoji}</span><span style="font-size:0.6em;position:absolute;bottom:4px;right:4px;color:#fff;text-shadow:1px 1px 2px #000;">${qtd}</span>`;
-            slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); renderMobileHotbar(); };
-            mobileHotbar.appendChild(slot);
-        });
-    }
+    let joystickTimeout = null;
+    let joystickTouchId = null;
 
     function resetGame() {
       player = { 
@@ -449,7 +478,6 @@
         invencivel: 0, 
         id: selfId 
       };
-      keys = {};
       enemies = [];
       materials = [];
       buildings = [];
@@ -498,129 +526,39 @@
       spawnEnemy();
       spawnMaterials();
 
-      if (isMobileDevice) {
-        actionButtons.style.display = 'flex';
-        mobileHotbar.style.display = 'flex';
-        joystickArea.style.display = 'block';
-      }
-
       restartBtn.style.display = 'none';
 
       announceSelf();
       requestAnimationFrame(gameLoop);
     }
 
-    const tutorialTexts = [
-      "Bem-vindo! Use WASD/setas (PC) ou Joystick (celular) para se mover.",
-      "Pegue madeira 🌲 e pedra 🪨 andando sobre elas.",
-      "F = espada (3 madeira, 2 pedra).",
-      "G = picareta (2 madeira, 3 pedra).",
-      "Hotbar (1-0 / toque) para selecionar; E/Enter/🎒 para usar.",
-      "Toque/clique no mapa para construir/usar ferramentas.",
-      "Espaço/⚔️ para atacar inimigos (com espada).",
-      "P para pausar/despausar.",
-      "Boa sorte! Tutorial encerrado."
-    ];
-    function showTutorialStep() {
-      if (!tutorialEnabled || tutorialStep >= tutorialTexts.length) {
-        tutorialBox.style.display = 'none';
-        return;
-      }
-      tutorialBox.innerHTML = tutorialTexts[tutorialStep] + "<br><button>OK</button>";
-      tutorialBox.style.display = 'block';
-      tutorialBox.querySelector('button').onclick = () => {
-        tutorialStep++;
-        showTutorialStep();
-      };
-    }
-    function askTutorial() {
-      tutorialBox.innerHTML = "Deseja ativar o tutorial?<br><button id='sim'>Sim</button> <button id='nao'>Não</button>";
-      tutorialBox.style.display = 'block';
-      document.getElementById('sim').onclick = () => {
-        tutorialEnabled = true; tutorialStep = 0; showTutorialStep();
-      };
-      document.getElementById('nao').onclick = () => {
-        tutorialEnabled = false; tutorialBox.style.display = 'none';
-      };
-    }
-
     function setPause(val) {
       paused = val;
       pauseOverlay.style.display = paused ? 'flex' : 'none';
+      if (!paused && !dayTransitionActive) requestAnimationFrame(gameLoop);
     }
-
-    const dayCanvas = document.getElementById('dayTransition');
-    const dayCtx = dayCanvas.getContext('2d');
-    function resizeDayCanvas() {
-      dayCanvas.width = window.innerWidth;
-      dayCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeDayCanvas);
-    resizeDayCanvas();
-
-    function showDayTransition(dia) {
-      dayTransitionActive = true;
-      dayCanvas.style.display = 'block';
-      let t = 0;
-      function anim() {
-        dayCtx.clearRect(0,0,dayCanvas.width,dayCanvas.height);
-        dayCtx.globalAlpha = 0.6;
-        dayCtx.fillStyle = "#223c16";
-        dayCtx.fillRect(0,0,dayCanvas.width,dayCanvas.height);
-        dayCtx.globalAlpha = 1;
-        let cx = (dayCanvas.width+200) * (t/1.2) - 100;
-        let cy = dayCanvas.height*0.7 - Math.sin(Math.PI*t/1.2)*dayCanvas.height*0.5;
-        dayCtx.save();
-        dayCtx.shadowColor = "#ffe066";
-        dayCtx.shadowBlur = 60;
-        dayCtx.beginPath();
-        dayCtx.arc(cx, cy, 70, 0, 2*Math.PI);
-        dayCtx.fillStyle = "#ffe066";
-        dayCtx.fill();
-        dayCtx.restore();
-        dayCtx.save();
-        dayCtx.font = "bold 60px Arial";
-        dayCtx.textAlign = "center";
-        dayCtx.fillStyle = "#fff";
-        dayCtx.strokeStyle = "#ffe066";
-        dayCtx.lineWidth = 6;
-        dayCtx.globalAlpha = Math.min(1, t*2);
-        dayCtx.strokeText("Dia "+dia, dayCanvas.width/2, dayCanvas.height/2);
-        dayCtx.fillText("Dia "+dia, dayCanvas.width/2, dayCanvas.height/2);
-        dayCtx.restore();
-        t += 0.025;
-        if (t < 1.2) requestAnimationFrame(anim);
-        else { dayCanvas.style.display = 'none'; dayTransitionActive = false; }
-      }
-      anim();
-    }
-
+    
+    // Controles e Eventos
     document.addEventListener('keydown', e => {
-      if (paused && e.key !== 'p' && e.key !== 'P') return;
-      keyboard[e.key] = true;
-      if (e.key === 'p' || e.key === 'P') setPause(!paused);
-      if (e.key >= '1' && e.key <= '9') { hotbarSelecionado = parseInt(e.key)-1; renderHotbar(); }
-      if (e.key === '0') { hotbarSelecionado = 9; renderHotbar(); }
-      if (e.key === ' ' || e.key === 'Spacebar') attackEnemy();
-      if (e.key === 'f' || e.key === 'F') craftItem('espada');
-      if (e.key === 'g' || e.key === 'G') craftItem('picareta');
-      if (e.key === 'r' || e.key === 'R') craftItem('tocha');
-      if (e.key === 'c' || e.key === 'C') craftItem('parede_madeira');
-      if (e.key === 'v' || e.key === 'V') craftItem('parede_pedra');
-      if (e.key === 'b' || e.key === 'B') craftItem('maca');
-      if (e.key === 'y' || e.key === 'Y') craftItem('armadura');
-      if (e.key === 'u' || e.key === 'U') craftItem('gema');
-      if (e.key === 'm' || e.key === 'M') craftItem('bomba');
-      if (e.key === 'e' || e.key === 'E') usarHotbar();
-      if (e.key === 'q' || e.key === 'Q') { buildMode = null; updateCrafting(); }
-      if (e.key === 'Enter') usarHotbar();
+      const key = e.key.toLowerCase();
+      if (paused && key !== 'p') return;
+      keyboard[key] = true;
+      if (key === 'p') { setPause(!paused); }
+      if (key >= '1' && key <= '9') { hotbarSelecionado = parseInt(key)-1; renderHotbar(); }
+      if (key === '0') { hotbarSelecionado = 9; renderHotbar(); }
+      if (key === ' ') attackEnemy();
+      if (key === 'q' || key === 'z') { craftSelectedItem(); }
+      if (key === 'e' || key === 'x') { usarHotbarAtMouse(); }
     });
-    document.addEventListener('keyup', e => keyboard[e.key] = false);
+
+    document.addEventListener('keyup', e => {
+      keyboard[e.key.toLowerCase()] = false;
+    });
 
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
-      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado+1)%10;
-      else hotbarSelecionado = (hotbarSelecionado+9)%10;
+      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % 10;
+      else hotbarSelecionado = (hotbarSelecionado + 9) % 10;
       renderHotbar();
     }, {passive:false});
 
@@ -632,66 +570,100 @@
 
     canvas.addEventListener('mousedown', e => {
       e.preventDefault();
-      if (e.button === 0) {
-        if (buildMode === 'parede_madeira' || buildMode === 'parede_pedra' || buildMode === 'tocha' || buildMode === 'bomba' || buildMode === 'superpicareta') {
-          buildAt(mouseWorld.x, mouseWorld.y);
-        } else if (buildMode === 'picareta') {
-          usePickaxeAt(mouseWorld.x, mouseWorld.y);
-        } else {
+      if (e.button === 0) { // Botão esquerdo do mouse
           usarHotbarAtMouse();
-        }
-      } else if (e.button === 2) {
-        buildMode = null;
-        updateCrafting();
+      } else if (e.button === 2) { // Botão direito
+          buildMode = null;
+          updateCrafting();
       }
     });
-
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+    
+    // Botões mobile
+    btnAction.addEventListener('touchstart', e => { e.preventDefault(); usarHotbarAtMouse(); }, {passive:false});
+    btnCreate.addEventListener('touchstart', e => { e.preventDefault(); craftSelectedItem(); }, {passive:false});
+    
+    // Joystick
+    const joystickMaxRadius = joystickBase.clientWidth / 2;
+    joystickArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        joystickTouchId = t.identifier;
+    }, { passive: false });
 
-    function usarHotbar() { usarHotbarAtMouse(); }
-    function usarHotbarAtMouse() {
-      const item = hotbarItens[hotbarSelecionado].id;
-      if (item === 'espada') attackEnemy();
-      else if (item === 'maca') usarMaca();
-      else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
-        buildMode = item; updateCrafting();
-      } else if (item === 'picareta') {
-        buildMode = 'picareta'; updateCrafting(); usePickaxeAt(mouseWorld.x, mouseWorld.y);
-      }
-    }
+    joystickArea.addEventListener('touchmove', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === joystickTouchId) {
+                const rect = joystickArea.getBoundingClientRect();
+                let x = touch.clientX - rect.left - joystickMaxRadius;
+                let y = touch.clientY - rect.top - joystickMaxRadius;
+                const distance = Math.hypot(x, y);
+                if (distance > joystickMaxRadius) {
+                    const angle = Math.atan2(y, x);
+                    x = Math.cos(angle) * joystickMaxRadius;
+                    y = Math.sin(angle) * joystickMaxRadius;
+                }
+                joystickStick.style.transform = `translate(${x}px, ${y}px)`;
+                
+                const deadzone = 20;
+                keyboard['w'] = y < -deadzone;
+                keyboard['s'] = y > deadzone;
+                keyboard['a'] = x < -deadzone;
+                keyboard['d'] = x > deadzone;
+                break;
+            }
+        }
+    }, { passive: false });
 
-    restartBtn.addEventListener('click', resetGame);
+    joystickArea.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joystickTouchId) {
+                joystickTouchId = null;
+                joystickStick.style.transform = `translate(-50%, -50%)`;
+                keyboard['w'] = keyboard['s'] = keyboard['a'] = keyboard['d'] = false;
+                break;
+            }
+        }
+    });
 
-function updateInventory() {
-    if (document.body.classList.contains('mobile')) {
-        invDiv.innerHTML = '';
-    } else {
-        let txt = `<span style="background:rgba(34,34,60,0.7);padding:4px 12px;border-radius:8px;">🌲 Madeira: ${inventory.madeira} | 🌳 Madeira Floresta: ${inventory.madeira_floresta} | 🪨 Pedra: ${inventory.pedra}`;
-        txt += ` | 💣 Bombas: ${inventory.bomba} | 💎 Gema: ${inventory.gema}`;
-        txt += ` | ⚔️ Espada: ${inventory.espada ? 'Sim' : 'Não'} | ⛏️ Picareta: ${inventory.picareta ? 'Sim' : 'Não'}`;
-        txt += ` | 🔥 Tochas: ${inventory.tocha} | 🟫 Parede Madeira: ${inventory.parede_madeira} | ⬜ Parede Pedra: ${inventory.parede_pedra}`;
-        txt += ` | 🍎 Maçã: ${inventory.maca} | 🦺 Armadura: ${inventory.armadura ? 'Sim' : 'Não'}</span>`;
-        txt += `<br><span style="font-size:13px">
-        [F] espada (3 madeira, 2 pedra), [G] picareta (2 madeira, 3 pedra), [R] tocha (1 madeira, 1 pedra), [C] parede madeira (2 madeira), [V] parede pedra (3 pedra), [B] maçã (2 madeira, 1 pedra), [Y] armadura (4 pedra, 2 madeira), [U] gema (5 gemas = super picareta), [M] bomba (2 pedra, 2 madeira)
-        </span>`;
-        txt += `<br><span style="font-size:13px">
-        [ESPAÇO] atacar, [1-0] hotbar, [E/Enter/🎒] usar item (no cursor), [Q] sair construção
-        </span>`;
+    // Menus
+    btnStart.onclick = () => {
+        startMenu.style.display = 'none';
+        gameContainer.style.display = 'block';
+        resetGame();
+        connectSocket();
+    };
+    optionsBtn.onclick = () => {
+        setPause(true);
+        optionsMenu.style.display = 'flex';
+        hudPanel.style.display = 'none';
+    };
+    btnResume.onclick = () => {
+        optionsMenu.style.display = 'none';
+        hudPanel.style.display = 'block';
+        setPause(false);
+    };
+
+    function updateInventory() {
+        const invDiv = document.getElementById('inv');
+        let txt = `<span style="font-size: 14px;">🌲 Madeira: ${inventory.madeira} | 🪨 Pedra: ${inventory.pedra} | 🍎 Maçã: ${inventory.maca} | 💣 Bomba: ${inventory.bomba}</span>`;
         invDiv.innerHTML = txt;
+        renderHotbar();
     }
-    renderHotbar();
-}
+    
     function updateCrafting() {
+      const craftDiv = document.getElementById('craft');
       let txt = `<b>Modo Construção:</b> `;
-      if (buildMode === 'parede_madeira') txt += '🟫 Parede de Madeira';
-      else if (buildMode === 'parede_pedra') txt += '⬜ Parede de Pedra';
-      else if (buildMode === 'tocha') txt += '🔥 Tocha';
-      else if (buildMode === 'picareta') txt += 'Picareta (Quebra materiais/paredes em área)';
-      else if (buildMode === 'bomba') txt += '💣 Bomba (colocar no chão)';
-      else if (buildMode === 'superpicareta') txt += 'Super Picareta (Quebra tudo)';
-      else txt += '<span style="color:#aaa">Nenhum</span>';
+      if (buildMode) {
+          const item = hotbarItens.find(i => i.id === buildMode);
+          txt += item ? `${item.emoji} ${item.nome}` : 'Desconhecido';
+      } else {
+          txt += '<span style="color:#aaa">Nenhum</span>';
+      }
       craftDiv.innerHTML = txt;
     }
+
     function updateVida() {
       let hearts = '';
       for (let i = 0; i < Math.floor(player.vida); i++) hearts += '❤️';
@@ -700,7 +672,8 @@ function updateInventory() {
       armaduraSpan.innerHTML = inventory.armadura ? '🦺' : '';
     }
 
-    function craftItem(item) {
+    function craftSelectedItem() {
+      const item = hotbarItens[hotbarSelecionado].id;
       if (item === 'espada' && !inventory.espada && inventory.madeira >= 3 && inventory.pedra >= 2) {
         inventory.madeira -= 3; inventory.pedra -= 2; inventory.espada = true; updateInventory();
       }
@@ -733,12 +706,27 @@ function updateInventory() {
       }
     }
 
+    function usarHotbarAtMouse() {
+      const item = hotbarItens[hotbarSelecionado].id;
+      if (item === 'espada') {
+        attackEnemy();
+      } else if (item === 'maca') {
+        usarMaca();
+      } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
+        buildMode = item;
+        updateCrafting();
+        buildAt(mouseWorld.x, mouseWorld.y);
+      } else if (item === 'picareta') {
+        usePickaxeAt(mouseWorld.x, mouseWorld.y);
+      }
+    }
+    
     function usarMaca() {
       if (inventory.maca > 0 && player.vida < 5) {
         inventory.maca--; player.vida = Math.min(5, player.vida + 2); updateInventory(); updateVida();
       }
     }
-
+    
     function attackEnemy() {
       if (!inventory.espada) return;
       for (let e of enemies) {
@@ -749,7 +737,7 @@ function updateInventory() {
         if (dist < 54) { e.vida--; if (e.vida <= 0) e.alive = false; return; }
       }
     }
-
+    
     function usePickaxeAt(x, y) {
       if (!inventory.picareta && !inventory.superpicareta) return;
       const radius = inventory.superpicareta ? 120 : 48;
@@ -776,7 +764,7 @@ function updateInventory() {
       updateInventory();
       renderHotbar();
     }
-
+    
     function buildAt(x, y) {
       if (buildMode === 'parede_madeira' && inventory.parede_madeira > 0) {
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
@@ -794,7 +782,7 @@ function updateInventory() {
         usePickaxeAt(x, y);
       }
     }
-
+    
     function spawnEnemy() {
       const edge = Math.floor(Math.random() * 4);
       let x, y;
@@ -809,7 +797,7 @@ function updateInventory() {
       if (dias >= 200 && Math.random() < 0.07) { tipo = 'explosivo'; cor = '#fff176'; vida = 1; speed = 1.3 + Math.random(); dano = 3; }
       enemies.push({ x, y, size: 36, speed, alive: true, mood: Math.random(), tipo, cor, vida, dano, explodindo: false });
     }
-
+    
     function spawnMaterials() {
       materials = [];
       for (let i = 0; i < 12; i++) {
@@ -831,15 +819,15 @@ function updateInventory() {
       apples = Math.random() < 0.6 ? [{ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 24, collected: false }] : [];
       gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false }] : [];
     }
-
+    
     function movePlayer() {
       let vel = player.speed;
       let moved = false;
       if (florestaDesbloqueada && player.x > W()-100) vel = player.speed * 0.55;
-      if (keyboard['ArrowUp'] || keyboard['w']) { player.y -= vel; moved = true; }
-      if (keyboard['ArrowDown'] || keyboard['s']) { player.y += vel; moved = true; }
-      if (keyboard['ArrowLeft'] || keyboard['a']) { player.x -= vel; moved = true; }
-      if (keyboard['ArrowRight'] || keyboard['d']) { player.x += vel; moved = true; }
+      if (keyboard['arrowup'] || keyboard['w']) { player.y -= vel; moved = true; }
+      if (keyboard['arrowdown'] || keyboard['s']) { player.y += vel; moved = true; }
+      if (keyboard['arrowleft'] || keyboard['a']) { player.x -= vel; moved = true; }
+      if (keyboard['arrowright'] || keyboard['d']) { player.x += vel; moved = true; }
       if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
       if (player.x < 0) player.x = 0;
       if (player.x > MAPA_LARGURA - player.size) player.x = MAPA_LARGURA - player.size;
@@ -847,7 +835,7 @@ function updateInventory() {
       if (player.y > MAPA_ALTURA - player.size) player.y = MAPA_ALTURA - player.size;
       return moved;
     }
-
+    
     function updateCamera() {
       if (florestaDesbloqueada && player.x > W()-100) {
         camera.x = Math.max(0, Math.min(player.x - W()/2 + player.size/2, MAPA_LARGURA - W()));
@@ -856,7 +844,7 @@ function updateInventory() {
       }
       camera.y = Math.max(0, Math.min(player.y - H()/2 + player.size/2, MAPA_ALTURA - H()));
     }
-
+    
     function moveEnemies() {
       for (let e of enemies) {
         if (!e.alive) continue;
@@ -874,7 +862,7 @@ function updateInventory() {
         e.y += (dy / dist) * e.speed;
       }
     }
-
+    
     function checkCollision() {
       for (let m of materials) {
         if (m.x < 0) continue;
@@ -919,7 +907,7 @@ function updateInventory() {
         }
       }
     }
-
+    
     function drawBackground(now) {
       if (!ctx) return;
       let t = (now/2000)%1;
@@ -944,7 +932,7 @@ function updateInventory() {
         if (p.y > H() + p.r) p.y = -p.r;
       }
     }
-
+    
     function drawWorld(now) {
       if (!ctx) return;
       if (montanhaLiberada) {
@@ -972,7 +960,7 @@ function updateInventory() {
         ctx.fill();
         ctx.restore();
       }
-
+    
       for (let m of materials) {
         if (m.x < 0) continue;
         if (m.type === 'madeira' || m.type === 'madeira_floresta') {
@@ -1010,7 +998,7 @@ function updateInventory() {
           ctx.restore();
         }
       }
-
+    
       for (let a of apples) {
         if (a.collected) continue;
         ctx.save();
@@ -1033,7 +1021,7 @@ function updateInventory() {
         ctx.stroke();
         ctx.restore();
       }
-
+    
       for (let g of gems) {
         if (g.collected) continue;
         ctx.save();
@@ -1049,7 +1037,7 @@ function updateInventory() {
         ctx.fill();
         ctx.restore();
       }
-
+    
       for (let b of buildings) {
         if (b.type === 'parede_madeira') {
           ctx.save();
@@ -1079,7 +1067,7 @@ function updateInventory() {
           ctx.restore();
         }
       }
-
+    
       for (let t of torches) {
         ctx.save();
         ctx.shadowColor = "#ff0";
@@ -1097,7 +1085,7 @@ function updateInventory() {
         ctx.stroke();
         ctx.restore();
       }
-
+    
       for (let b of bombs) {
         ctx.save();
         ctx.fillStyle = '#222';
@@ -1106,16 +1094,16 @@ function updateInventory() {
         ctx.fillRect(b.x+6, b.y+6, b.size-12, 6);
         ctx.restore();
       }
-
+    
       if (player) {
           drawPlayerEntity(player, true);
       }
-
+    
       for (const [id, p] of Object.entries(otherPlayers)) {
         if (!p) continue;
         drawPlayerEntity(p, false);
       }
-
+    
       for (let e of enemies) {
         if (!e.alive) continue;
         ctx.save();
@@ -1148,7 +1136,7 @@ function updateInventory() {
         ctx.restore();
       }
     }
-
+    
     function drawPlayerEntity(ent, isSelf) {
       if (!ctx || !ent) return;
       ctx.save();
@@ -1185,7 +1173,7 @@ function updateInventory() {
       ctx.arc(0, 7, 10, 0.2, Math.PI-0.2);
       ctx.stroke();
       ctx.restore();
-
+    
       if (ent.espada) {
         ctx.save();
         ctx.translate(ent.x+ent.size, ent.y+ent.size/2);
@@ -1218,15 +1206,20 @@ function updateInventory() {
         ctx.restore();
       }
     }
-
+    
     function gameLoop(now) {
-      if (!ctx) return;
+      if (!ctx) {
+        console.warn("Canvas context not initialized. Retrying...");
+        setTimeout(() => requestAnimationFrame(gameLoop), 100);
+        return;
+      }
+
       if (!startTime) startTime = now;
       if (running && !paused) {
         elapsed = (now - startTime) / 1000;
         timerSpan.textContent = elapsed.toFixed(1);
         dias = Math.floor(elapsed / (dayLength*2)) + 1;
-        if (dias !== lastDay) { showDayTransition(dias); lastDay = dias; }
+        if (dias !== lastDay) { lastDay = dias; }
         diasSpan.textContent = "Dia " + dias;
         if (!florestaDesbloqueada && dias >= 15) {
           florestaDesbloqueada = true;
@@ -1243,7 +1236,7 @@ function updateInventory() {
         if (moved) {
           throttleSendState();
         }
-
+    
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
           b.timer -= (1000/60);
@@ -1270,20 +1263,18 @@ function updateInventory() {
             bombs.splice(i,1);
           }
         }
-
+    
         drawBackground(now);
-
-
+        
         ctx.save();
         ctx.translate(-camera.x, -camera.y);
         drawWorld(now);
         ctx.restore();
-
+    
         if (player.invencivel > 0) player.invencivel--;
         if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
         if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
-
-
+    
         requestAnimationFrame(gameLoop);
       } else if (!running) {
         timerSpan.textContent = elapsed.toFixed(1);
@@ -1310,102 +1301,10 @@ function updateInventory() {
       }
     }
 
-const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-if (isMobileDevice) {
-  document.body.classList.add('mobile');
-}
-
-    document.getElementById('btn-attack')?.addEventListener('touchstart', e => { e.preventDefault(); attackEnemy(); }, {passive:false});
-    document.getElementById('btn-use')?.addEventListener('touchstart', e => { e.preventDefault(); usarHotbar(); }, {passive:false});
-
-    function updateMouseFromTouch(touch) {
-      const rect = canvas.getBoundingClientRect();
-      mouseWorld.x = touch.clientX - rect.left + camera.x;
-      mouseWorld.y = touch.clientY - rect.top + camera.y;
-    }
-    canvas.addEventListener('touchstart', e=>{
-      if (!isMobileDevice) return;
-      e.preventDefault();
-      const t = e.changedTouches[0];
-      updateMouseFromTouch(t);
-      if (buildMode) buildAt(mouseWorld.x, mouseWorld.y); else usarHotbarAtMouse();
-    }, {passive:false});
-    canvas.addEventListener('touchmove', e=>{
-      if (!isMobileDevice) return;
-      e.preventDefault();
-      const t = e.changedTouches[0];
-      updateMouseFromTouch(t);
-    }, {passive:false});
-
-    const joystickBaseRect = joystickBase.getBoundingClientRect();
-    const joystickCenterX = joystickBaseRect.width / 2;
-    const joystickCenterY = joystickBaseRect.height / 2;
-    const joystickMaxRadius = joystickBaseRect.width / 2;
-    let joystickTouchId = null;
-
-    joystickArea.addEventListener('touchstart', (e) => {
-        if (!isMobileDevice) return;
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        joystickTouchId = t.identifier;
-        isMovingWithJoystick = true;
-    }, { passive: false });
-
-    joystickArea.addEventListener('touchmove', (e) => {
-        if (!isMobileDevice) return;
-        e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
-            if (touch.identifier === joystickTouchId) {
-                const rect = joystickArea.getBoundingClientRect();
-                let x = touch.clientX - rect.left - joystickCenterX;
-                let y = touch.clientY - rect.top - joystickCenterY;
-                const distance = Math.hypot(x, y);
-
-                if (distance > joystickMaxRadius) {
-                    const angle = Math.atan2(y, x);
-                    x = Math.cos(angle) * joystickMaxRadius;
-                    y = Math.sin(angle) * joystickMaxRadius;
-                }
-
-                joystickStick.style.transform = `translate(${x}px, ${y}px)`;
-                
-                const deadzone = 20;
-                keyboard['w'] = y < -deadzone;
-                keyboard['s'] = y > deadzone;
-                keyboard['a'] = x < -deadzone;
-                keyboard['d'] = x > deadzone;
-
-                break;
-            }
-        }
-    }, { passive: false });
-
-    joystickArea.addEventListener('touchend', (e) => {
-        if (!isMobileDevice) return;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === joystickTouchId) {
-                joystickTouchId = null;
-                isMovingWithJoystick = false;
-                joystickStick.style.transform = `translate(-50%, -50%)`;
-                keyboard['w'] = keyboard['s'] = keyboard['a'] = keyboard['d'] = false;
-                break;
-            }
-        }
-    });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'r') {
-      if (!running) {
-        resetGame();
-      }
-    }
-  });
-
     window.onload = () => { 
+      gameContainer.style.display = 'none';
+      startMenu.style.display = 'flex';
       initCanvas();
-      askTutorial();
-      resetGame();
     };
     restartBtn.onclick = resetGame;
   </script>
