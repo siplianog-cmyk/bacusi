@@ -1192,8 +1192,8 @@
     function updateCamera() {
       const targetX = player.x + player.size / 2;
       const targetY = player.y + player.size / 2;
-      camera.x = targetX - (W() / (2 * CAMERA_ZOOM));
-      camera.y = targetY - (H() / (2 * CAMERA_ZOOM));
+      camera.x = targetX - (W() / (2 / CAMERA_ZOOM));
+      camera.y = targetY - (H() / (2 / CAMERA_ZOOM));
       camera.x = Math.max(0, Math.min(MAPA_LARGURA - W() / CAMERA_ZOOM, camera.x));
       camera.y = Math.max(0, Math.min(MAPA_ALTURA - H() / CAMERA_ZOOM, camera.y));
     }
@@ -1264,101 +1264,27 @@
     }
     
     function drawBackground(now) {
-      if (!ctx || backgroundSelect.value === 'beta') {
-        const t = (now / 2000) % 1;
-        const grad = ctx.createLinearGradient(0, 0, W(), H());
-        grad.addColorStop(0, isDay ? "#b6e07a" : "#2b3c5e");
-        grad.addColorStop(0.5 + t / 2, isDay ? "#6bbf3c" : "#1a1e3e");
-        grad.addColorStop(1, isDay ? "#a2e0e6" : "#223c16");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W(), H());
-        for (const p of particles) {
-          ctx.save();
-          ctx.globalAlpha = 1;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
-          ctx.fillStyle = p.color;
-          ctx.fill();
-          ctx.restore();
-          p.x += p.dx;
-          p.y += p.dy;
-          if (p.x < -p.r) p.x = W() + p.r;
-          if (p.x > W() + p.r) p.x = -p.r;
-          if (p.y < -p.r) p.y = H() + p.r;
-          if (p.y > H() + p.r) p.y = -p.r;
-        }
-        return;
-      }
-
       ctx.save();
-      
-      const dayColor = { r: 135, g: 206, b: 235 };
-      const nightColor = { r: 25, g: 25, b: 112 };
-      const transitionTime = (elapsed % (dayLength * 2));
-      const isDusk = transitionTime > dayLength && transitionTime < dayLength + 2;
-      const isDawn = transitionTime > 0 && transitionTime < 2;
-
-      let r, g, b;
-      let transitionProgress = 0;
-      if (isDusk) {
-          transitionProgress = (transitionTime - dayLength) / 2;
-          r = dayColor.r + (nightColor.r - dayColor.r) * transitionProgress;
-          g = dayColor.g + (nightColor.g - dayColor.g) * transitionProgress;
-          b = dayColor.b + (nightColor.b - dayColor.b) * transitionProgress;
-      } else if (isDawn) {
-          transitionProgress = transitionTime / 2;
-          r = nightColor.r + (dayColor.r - nightColor.r) * transitionProgress;
-          g = nightColor.g + (dayColor.g - nightColor.g) * transitionProgress;
-          b = nightColor.b + (dayColor.b - nightColor.b) * transitionProgress;
-      } else {
-          r = isDay ? dayColor.r : nightColor.r;
-          g = isDay ? dayColor.g : nightColor.g;
-          b = isDay ? dayColor.b : nightColor.b;
-      }
-
-      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      const t = (now / 2000) % 1;
+      const grad = ctx.createLinearGradient(0, 0, W(), H());
+      grad.addColorStop(0, isDay ? "#b6e07a" : "#2b3c5e");
+      grad.addColorStop(0.5 + t / 2, isDay ? "#6bbf3c" : "#1a1e3e");
+      grad.addColorStop(1, isDay ? "#a2e0e6" : "#223c16");
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W(), H());
-
-      ctx.translate(-camera.x, -camera.y);
-
-      // Grass
-      ctx.fillStyle = isDay ? '#4a7d3a' : '#2d4b2d';
-      ctx.fillRect(0, MAPA_ALTURA * 0.75, MAPA_LARGURA, MAPA_ALTURA * 0.25);
-
-      // Trees
-      const treeColor = isDay ? '#3d5c31' : '#1f331a';
-      ctx.fillStyle = treeColor;
-      for (let i = 0; i < 50; i++) {
-          const x = Math.random() * MAPA_LARGURA;
-          const y = MAPA_ALTURA * 0.7 + Math.random() * (MAPA_ALTURA * 0.2);
-          ctx.beginPath();
-          ctx.arc(x, y, 20 + Math.random() * 15, 0, 2 * Math.PI);
-          ctx.fill();
+      for (const p of particles) {
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < -p.r) p.x = W() + p.r;
+        if (p.x > W() + p.r) p.x = -p.r;
+        if (p.y < -p.r) p.y = H() + p.r;
+        if (p.y > H() + p.r) p.y = -p.r;
       }
-
-      // Mountains
-      ctx.fillStyle = isDay ? '#7c8b8f' : '#4f595b';
-      ctx.beginPath();
-      ctx.moveTo(0, MAPA_ALTURA * 0.6);
-      ctx.lineTo(MAPA_LARGURA * 0.2, MAPA_ALTURA * 0.4);
-      ctx.lineTo(MAPA_LARGURA * 0.5, MAPA_ALTURA * 0.6);
-      ctx.lineTo(MAPA_LARGURA * 0.8, MAPA_ALTURA * 0.5);
-      ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA * 0.7);
-      ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA);
-      ctx.lineTo(0, MAPA_ALTURA);
-      ctx.closePath();
-      ctx.fill();
-
-      // Rivers
-      ctx.fillStyle = isDay ? '#87ceeb' : '#1e384c';
-      ctx.beginPath();
-      ctx.moveTo(MAPA_LARGURA * 0.3, MAPA_ALTURA * 0.8);
-      ctx.quadraticCurveTo(MAPA_LARGURA * 0.4, MAPA_ALTURA * 0.9, MAPA_LARGURA * 0.5, MAPA_ALTURA * 0.85);
-      ctx.lineTo(MAPA_LARGURA * 0.5, MAPA_ALTURA);
-      ctx.lineTo(MAPA_LARGURA * 0.25, MAPA_ALTURA);
-      ctx.quadraticCurveTo(MAPA_LARGURA * 0.2, MAPA_ALTURA * 0.9, MAPA_LARGURA * 0.3, MAPA_ALTURA * 0.8);
-      ctx.fill();
-
       ctx.restore();
     }
     
