@@ -454,8 +454,61 @@
     ];
     let hotbarSelecionado = 0;
     
-    // Multiplayer (desativado temporariamente)
-    let isMultiplayerEnabled = false;
+    // Multiplayer (ativado)
+    let ws = null;
+    let isMultiplayerEnabled = multiplayerToggle.checked;
+    let otherPlayers = {};
+
+    function setupMultiplayer() {
+        if (!isMultiplayerEnabled) {
+            if (ws) { ws.close(); ws = null; otherPlayers = {}; }
+            return;
+        }
+
+        if (ws) return;
+
+        ws = new WebSocket('ws://localhost:3000');
+        
+        ws.onopen = () => {
+            console.log('Conectado ao servidor WebSocket');
+            player.id = Date.now().toString(); // ID único para o jogador
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'playerUpdate') {
+                otherPlayers = data.players;
+                delete otherPlayers[player.id];
+            } else if (data.type === 'playerDisconnected') {
+                delete otherPlayers[data.id];
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Desconectado do servidor WebSocket');
+            ws = null;
+            otherPlayers = {};
+        };
+
+        ws.onerror = (error) => {
+            console.error('Erro no WebSocket:', error);
+        };
+    }
+    
+    function sendPlayerUpdate() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const playerState = {
+                id: player.id,
+                x: player.x,
+                y: player.y,
+                color: player.color,
+                vida: player.vida,
+                armadura: player.armadura
+            };
+            ws.send(JSON.stringify({ type: 'playerUpdate', player: playerState }));
+        }
+    }
+
 
     function renderHotbar() {
       const hotbarElement = document.getElementById('hotbar');
@@ -578,6 +631,8 @@
       requestAnimationFrame(gameLoop);
       if (currentMusic) { currentMusic.pause(); }
       playNextMusic();
+      
+      setupMultiplayer();
     }
 
     function setPause(val) {
@@ -712,6 +767,7 @@
     btnResume.onclick = () => {
         playSound('click');
         isMultiplayerEnabled = multiplayerToggle.checked;
+        setupMultiplayer();
         optionsMenu.style.display = 'none';
         hudPanel.style.display = 'block';
         setPause(false);
@@ -1358,7 +1414,11 @@
       }
     
       if (player) {
-          drawPlayerEntity(player, true);
+          drawPlayerEntity(player);
+      }
+      
+      for(const id in otherPlayers) {
+          drawPlayerEntity(otherPlayers[id]);
       }
     
       for (let e of enemies) {
@@ -1395,7 +1455,7 @@
       ctx.restore();
     }
     
-    function drawPlayerEntity(ent, isSelf) {
+    function drawPlayerEntity(ent) {
       if (!ctx || !ent) return;
       ctx.save();
       ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
@@ -1513,6 +1573,10 @@
         updateCamera();
         moveEnemies();
         checkCollision();
+        
+        if (isMultiplayerEnabled && ws && ws.readyState === WebSocket.OPEN) {
+            sendPlayerUpdate();
+        }
         
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
