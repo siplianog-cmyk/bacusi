@@ -1744,7 +1744,7 @@
         }
         
         let moved = movePlayer();
-        updateCamera(); // Esta linha é crucial para a câmera seguir o jogador
+        updateCamera();
         moveEnemies();
         checkCollision();
         
@@ -1804,7 +1804,7 @@
         drawBackground(now);
         
         ctx.save();
-        ctx.translate(-camera.x, -camera.y); // Essa linha faz a câmera se mover
+        ctx.translate(-camera.x, -camera.y);
         drawWorld(now);
         ctx.restore();
     
