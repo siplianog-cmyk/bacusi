@@ -342,6 +342,8 @@
       explosion: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/explosion.mp3',
       step: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/step.mp3',
       potion: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/potion.mp3',
+      bow: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/bow.mp3',
+      mine: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/mine.mp3',
     };
 
     const musicUrls = [
@@ -435,17 +437,16 @@
     
     const hotbarItens = [
       { id: 'espada', nome: 'Espada', emoji: '⚔️' },
+      { id: 'arco', nome: 'Arco', emoji: '🏹' },
       { id: 'picareta', nome: 'Picareta', emoji: '⛏️' },
       { id: 'maca', nome: 'Maçã', emoji: '🍎' },
       { id: 'tocha', nome: 'Tocha', emoji: '🔥' },
       { id: 'parede_madeira', nome: 'Parede Madeira', emoji: '🟫' },
-      { id: 'parede_pedra', nome: 'Parede Pedra', emoji: '⬜' },
-      { id: 'armadura', nome: 'Armadura', emoji: '🦺' },
-      { id: 'bomba', nome: 'Bomba', emoji: '💣' },
+      { id: 'armadilha', nome: 'Armadilha', emoji: '🕸️' },
+      { id: 'mina', nome: 'Mina Explosiva', emoji: '💣' },
+      { id: 'fogueira', nome: 'Fogueira', emoji: '🏕️' },
       { id: 'tinteiro_magico', nome: 'Tinteiro Mágico', emoji: '🖌️' },
       { id: 'pocao', nome: 'Poção Força', emoji: '🧪' },
-      { id: 'madeira', nome: 'Madeira', emoji: '🌲' },
-      { id: 'pedra', nome: 'Pedra', emoji: '🪨' }
     ];
     let hotbarSelecionado = 0;
     
@@ -455,15 +456,6 @@
     let selfId = null;
     const otherPlayers = {};
     let isMultiplayerEnabled = true;
-
-    function getRandomColor() {
-      const letters = '0123456789ABCDEF';
-      let color = '#';
-      for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
-      }
-      return color;
-    }
 
     function connectSocket() {
       if (!isMultiplayerEnabled) {
@@ -528,6 +520,8 @@
                       existingPlayer.armadura = payload[id].armadura;
                       existingPlayer.espada = payload[id].espada;
                       existingPlayer.picareta = payload[id].picareta;
+                      existingPlayer.arco = payload[id].arco;
+                      existingPlayer.superpicareta = payload[id].superpicareta;
                       existingPlayer.color = payload[id].color;
                       existingPlayer.effectTimer = payload[id].effectTimer;
                   } else {
@@ -561,6 +555,8 @@
                 armadura: player.armadura,
                 espada: inventory.espada,
                 picareta: inventory.picareta,
+                arco: inventory.arco,
+                superpicareta: inventory.superpicareta,
                 color: player.color,
                 effectTimer: player.effectTimer
             });
@@ -581,6 +577,8 @@
             armadura: inventory.armadura,
             espada: inventory.espada,
             picareta: inventory.picareta,
+            arco: inventory.arco,
+            superpicareta: inventory.superpicareta,
             color: player.color,
             effectTimer: player.effectTimer
           });
@@ -636,6 +634,7 @@
     let bombs = [];
     let joystickTimeout = null;
     let joystickTouchId = null;
+    let arrows = [];
 
     function resetGame() {
       player = { 
@@ -668,18 +667,19 @@
       elapsed = 0;
       inventory = {
         madeira: 0,
-        madeira_floresta: 0,
         pedra: 0,
+        flechas: 0,
         espada: false,
         picareta: false,
+        arco: false,
         tocha: 0,
+        fogueira: 0,
         parede_madeira: 0,
-        parede_pedra: 0,
+        armadilha: 0,
+        mina: 0,
         maca: 0,
         armadura: false,
         gema: 0,
-        bomba: 0,
-        sementes: 0,
         pocao: 0,
         superpicareta: false,
         tinteiro_magico: 0
@@ -759,6 +759,8 @@
         const item = hotbarItens[hotbarSelecionado].id;
         if (item === 'espada') {
           attackEnemy();
+        } else if (item === 'arco') {
+          shootArrow();
         } else if (item === 'maca') {
           usarMaca();
         } else if (item === 'picareta' || item === 'superpicareta') {
@@ -896,7 +898,7 @@
 
     function updateInventory() {
         const invDiv = document.getElementById('inv');
-        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba} | 💎: ${inventory.gema} | 🧪: ${inventory.pocao}</span>`;
+        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 🏹: ${inventory.flechas} | 💎: ${inventory.gema} | 🧪: ${inventory.pocao}</span>`;
         invDiv.innerHTML = txt;
         renderHotbar();
     }
@@ -930,29 +932,33 @@
       if (item === 'picareta' && !inventory.picareta && inventory.madeira >= 2 && inventory.pedra >= 3) {
         inventory.madeira -= 2; inventory.pedra -= 3; inventory.picareta = true; updateInventory();
       }
-      if (item === 'tocha' && (inventory.madeira >= 1 || inventory.madeira_floresta >= 1) && inventory.pedra >= 1) {
-        if (inventory.madeira >= 1) inventory.madeira -= 1; else inventory.madeira_floresta -= 1;
-        inventory.pedra -= 1; inventory.tocha += 1; updateInventory();
+      if (item === 'arco' && !inventory.arco && inventory.madeira >= 4) {
+        inventory.madeira -= 4; inventory.arco = true; updateInventory();
       }
-      if (item === 'parede_madeira' && (inventory.madeira >= 2 || inventory.madeira_floresta >= 2)) {
-        if (inventory.madeira >= 2) inventory.madeira -= 2; else inventory.madeira_floresta -= 2;
-        inventory.parede_madeira += 1; updateInventory();
+      if (item === 'tocha' && inventory.madeira >= 1 && inventory.pedra >= 1) {
+        inventory.madeira -= 1; inventory.pedra -= 1; inventory.tocha += 1; updateInventory();
       }
-      if (item === 'parede_pedra' && inventory.pedra >= 3) { inventory.pedra -= 3; inventory.parede_pedra += 1; updateInventory(); }
-      if (item === 'maca' && (inventory.madeira >= 2 || inventory.madeira_floresta >= 2) && inventory.pedra >= 1) {
-        if (inventory.madeira >= 2) inventory.madeira -= 2; else inventory.madeira_floresta -= 2;
-        inventory.pedra -= 1; inventory.maca += 1; updateInventory();
+      if (item === 'fogueira' && inventory.madeira >= 5) {
+        inventory.madeira -= 5; inventory.fogueira += 1; updateInventory();
       }
-      if (item === 'armadura' && !inventory.armadura && inventory.pedra >= 4 && (inventory.madeira >= 2 || inventory.madeira_floresta >= 2)) {
-        inventory.pedra -= 4; if (inventory.madeira >= 2) inventory.madeira -= 2; else inventory.madeira_floresta -= 2;
+      if (item === 'parede_madeira' && inventory.madeira >= 2) {
+        inventory.madeira -= 2; inventory.parede_madeira += 1; updateInventory();
+      }
+      if (item === 'armadilha' && inventory.madeira >= 1 && inventory.pedra >= 1) {
+        inventory.madeira -= 1; inventory.pedra -= 1; inventory.armadilha += 1; updateInventory();
+      }
+      if (item === 'mina' && inventory.madeira >= 2 && inventory.pedra >= 2) {
+        inventory.madeira -= 2; inventory.pedra -= 2; inventory.mina += 1; updateInventory();
+      }
+      if (item === 'maca' && inventory.madeira >= 2 && inventory.pedra >= 1) {
+        inventory.madeira -= 2; inventory.pedra -= 1; inventory.maca += 1; updateInventory();
+      }
+      if (item === 'armadura' && !inventory.armadura && inventory.pedra >= 4 && inventory.madeira >= 2) {
+        inventory.pedra -= 4; inventory.madeira -= 2;
         inventory.armadura = true; player.armadura = true; updateInventory(); updateVida();
       }
       if (item === 'superpicareta' && !inventory.superpicareta && inventory.gema >= 5) {
         inventory.gema -= 5; inventory.superpicareta = true; updateInventory();
-        alert("Você criou a Super Picareta! Selecione e use no mapa para destruir instantaneamente.");
-      }
-      if (item === 'bomba' && inventory.pedra >= 2 && inventory.madeira >= 2) {
-        inventory.pedra -= 2; inventory.madeira -= 2; inventory.bomba++; updateInventory();
       }
       if (item === 'tinteiro_magico' && inventory.gema >= 10) {
         inventory.gema -= 10; inventory.tinteiro_magico++; updateInventory();
@@ -966,13 +972,15 @@
       const item = hotbarItens[hotbarSelecionado].id;
       if (item === 'espada') {
         attackEnemy();
+      } else if (item === 'arco') {
+        shootArrow();
       } else if (item === 'maca') {
         usarMaca();
       } else if (item === 'tinteiro_magico') {
         usarTinteiroMagico();
       } else if (item === 'pocao') {
         usarPocao();
-      } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
+      } else if (item === 'tocha' || item === 'parede_madeira' || item === 'armadilha' || item === 'mina' || item === 'fogueira') {
         buildMode = item;
         updateCrafting();
       } else if (item === 'picareta' || item === 'superpicareta') {
@@ -1025,6 +1033,23 @@
         if (dist < 54) { e.vida -= attackPower * player.attackModifier; if (e.vida <= 0) e.alive = false; return; }
       }
     }
+
+    function shootArrow() {
+      if (!inventory.arco || inventory.flechas <= 0) return;
+      playSound('bow');
+      inventory.flechas--;
+      const dx = mouseWorld.x - player.x;
+      const dy = mouseWorld.y - player.y;
+      const angle = Math.atan2(dy, dx);
+      const speed = 15;
+      arrows.push({
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed
+      });
+      updateInventory();
+    }
     
     function usePickaxeAt(x, y) {
       if (!inventory.picareta && !inventory.superpicareta) return;
@@ -1068,14 +1093,19 @@
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
         inventory.parede_madeira--; updateInventory();
         buildMode = null;
-      } else if (item === 'parede_pedra' && inventory.parede_pedra > 0) {
+      } else if (item === 'armadilha' && inventory.armadilha > 0) {
         playSound('click');
-        buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_pedra' });
-        inventory.parede_pedra--; updateInventory();
+        buildings.push({ x: x-20, y: y-20, size: 40, type: 'armadilha' });
+        inventory.armadilha--; updateInventory();
         buildMode = null;
-      } else if (item === 'bomba' && inventory.bomba > 0) {
+      } else if (item === 'mina' && inventory.mina > 0) {
         playSound('click');
-        bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.bomba--; updateInventory();
+        bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.mina--; updateInventory();
+        buildMode = null;
+      } else if (item === 'fogueira' && inventory.fogueira > 0) {
+        playSound('click');
+        buildings.push({ x: x-20, y: y-20, size: 40, type: 'fogueira' });
+        inventory.fogueira--; updateInventory();
         buildMode = null;
       } else {
         buildMode = null;
@@ -1446,19 +1476,38 @@
           ctx.moveTo(b.x+8, b.y+b.size-8); ctx.lineTo(b.x+b.size-8, b.y+8);
           ctx.stroke();
           ctx.restore();
-        } else {
+        } else if (b.type === 'armadilha') {
           ctx.save();
-          ctx.shadowColor = "#bbb";
+          ctx.shadowColor = "#555";
           ctx.shadowBlur = 8;
-          ctx.fillStyle = "#bbb";
-          ctx.strokeStyle = "#444";
-          ctx.lineWidth = 3;
-          ctx.fillRect(b.x, b.y, b.size, b.size);
-          ctx.strokeRect(b.x, b.y, b.size, b.size);
+          ctx.fillStyle = "#555";
+          ctx.strokeStyle = "#333";
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(b.x+b.size/2, b.y+b.size/2, 10, 0, 2*Math.PI);
+          ctx.arc(b.x+b.size/2, b.y+b.size/2, b.size/2, 0, 2*Math.PI);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+b.size,b.y+b.size);
+          ctx.moveTo(b.x+b.size,b.y); ctx.lineTo(b.x,b.y+b.size);
           ctx.stroke();
           ctx.restore();
+        } else if (b.type === 'fogueira') {
+            ctx.save();
+            ctx.shadowColor = "#ff5722";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = '#ff5722';
+            ctx.beginPath();
+            ctx.moveTo(b.x+15,b.y+b.size);
+            ctx.lineTo(b.x+25,b.y+b.size);
+            ctx.lineTo(b.x+20, b.y+b.size-20);
+            ctx.fill();
+            ctx.fillStyle = '#ff9800';
+            ctx.beginPath();
+            ctx.moveTo(b.x+18,b.y+b.size-5);
+            ctx.lineTo(b.x+28,b.y+b.size-5);
+            ctx.lineTo(b.x+23,b.y+b.size-25);
+            ctx.fill();
+            ctx.restore();
         }
       }
     
@@ -1486,6 +1535,19 @@
         ctx.fillRect(b.x, b.y, b.size, b.size);
         ctx.fillStyle = '#f33';
         ctx.fillRect(b.x+6, b.y+6, b.size-12, 6);
+        ctx.restore();
+      }
+
+      for (let a of arrows) {
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(a.x, a.y, 10, 2);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(a.x + 10, a.y - 5);
+        ctx.lineTo(a.x + 15, a.y);
+        ctx.lineTo(a.x + 10, a.y + 5);
+        ctx.fill();
         ctx.restore();
       }
     
@@ -1600,6 +1662,20 @@
         ctx.stroke();
         ctx.restore();
       }
+      if (ent.arco) {
+        ctx.save();
+        ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
+        ctx.strokeStyle = '#a4a4a4';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 25, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-25, 0);
+        ctx.lineTo(25, 0);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     
     function gameLoop(now) {
@@ -1667,6 +1743,27 @@
             }
             bombs.splice(i,1);
           }
+        }
+
+        for (let i = arrows.length - 1; i >= 0; i--) {
+            const arrow = arrows[i];
+            arrow.x += arrow.vx;
+            arrow.y += arrow.vy;
+            let hit = false;
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const enemy = enemies[j];
+                if (Math.hypot(arrow.x - enemy.x, arrow.y - enemy.y) < 20) {
+                    enemy.vida -= 1 * player.attackModifier;
+                    if (enemy.vida <= 0) {
+                        enemy.alive = false;
+                    }
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit || arrow.x < -100 || arrow.x > MAPA_LARGURA + 100 || arrow.y < -100 || arrow.y > MAPA_ALTURA + 100) {
+                arrows.splice(i, 1);
+            }
         }
     
         drawBackground(now);
