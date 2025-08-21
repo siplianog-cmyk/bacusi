@@ -243,9 +243,9 @@
           <p class="option-label">Tamanho da HUD:</p>
           <input type="range" id="hud-size-slider" min="0.5" max="2" step="0.1" value="1">
           <p class="option-label">Tamanho dos Botões:</p>
-          <input type="range" id="btn-size-slider" min="0.5" max="2" step="0.1" value="1">
+          <input type="range" id="btn-size-slider" min="0.5" max="2" step="0.1" value="1.2">
           <p class="option-label">Tamanho do Joystick:</p>
-          <input type="range" id="joystick-size-slider" min="0.5" max="2" step="0.1" value="1">
+          <input type="range" id="joystick-size-slider" min="0.5" max="2" step="0.1" value="1.2">
           <p class="option-label">Posição do Joystick (Horizontal):</p>
           <input type="range" id="joystick-x-slider" min="10" max="90" step="1" value="20">
           <p class="option-label">Posição do Joystick (Vertical):</p>
@@ -404,12 +404,24 @@
         if (!canvas) return;
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        CAMERA_ZOOM = isMobile ? (canvas.width / 1200) : 1;
+        
+        // Novo cálculo de zoom para mobile
         if (isMobile) {
-            const minZoom = 0.4;
-            const maxZoom = 1.0;
-            const newZoom = Math.max(minZoom, Math.min(maxZoom, canvas.width / 1000));
-            CAMERA_ZOOM = newZoom;
+            const aspect = window.innerWidth / window.innerHeight;
+            const targetAspect = 16 / 9; // Por exemplo
+            if (aspect > targetAspect) {
+                CAMERA_ZOOM = window.innerHeight / 720; // Ajusta o zoom pela altura
+            } else {
+                CAMERA_ZOOM = window.innerWidth / 1280; // Ajusta o zoom pela largura
+            }
+        } else {
+            CAMERA_ZOOM = 1;
+        }
+        
+        if (isMobile) {
+            const minZoom = 0.5;
+            const maxZoom = 1.2;
+            CAMERA_ZOOM = Math.max(minZoom, Math.min(maxZoom, CAMERA_ZOOM));
         }
     }
 
@@ -949,8 +961,8 @@
       if (item === 'armadilha' && inventory.madeira >= 1 && inventory.pedra >= 1) {
         inventory.madeira -= 1; inventory.pedra -= 1; inventory.armadilha += 1; updateInventory();
       }
-      if (item === 'mina' && inventory.madeira >= 2 && inventory.pedra >= 2) {
-        inventory.madeira -= 2; inventory.pedra -= 2; inventory.mina += 1; updateInventory();
+      if (item === 'mina' && inventory.mina > 0) {
+        inventory.mina--; updateInventory();
       }
       if (item === 'maca' && inventory.madeira >= 2 && inventory.pedra >= 1) {
         inventory.madeira -= 2; inventory.pedra -= 1; inventory.maca += 1; updateInventory();
@@ -1180,8 +1192,8 @@
     function updateCamera() {
       const targetX = player.x + player.size / 2;
       const targetY = player.y + player.size / 2;
-      camera.x = targetX - W() / (2 * CAMERA_ZOOM);
-      camera.y = targetY - H() / (2 * CAMERA_ZOOM);
+      camera.x = targetX - (W() / (2 * CAMERA_ZOOM));
+      camera.y = targetY - (H() / (2 * CAMERA_ZOOM));
       camera.x = Math.max(0, Math.min(MAPA_LARGURA - W() / CAMERA_ZOOM, camera.x));
       camera.y = Math.max(0, Math.min(MAPA_ALTURA - H() / CAMERA_ZOOM, camera.y));
     }
