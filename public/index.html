@@ -36,7 +36,7 @@
         text-shadow: 2px 2px 12px #000;
         color: #ffe066;
     }
-    .overlay-menu button, .overlay-menu input[type="range"], .overlay-menu select {
+    .overlay-menu button, .overlay-menu input[type="color"], .overlay-menu input[type="range"], .overlay-menu select {
         padding: 12px 36px;
         font-size: 1.5em;
         border-radius: 12px;
@@ -207,6 +207,36 @@
         font-size: 1em;
         margin-top: 16px;
     }
+    /* Switch de toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+      margin-top: 16px;
+    }
+    .switch input { display:none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider:before { transform: translateX(26px); }
   </style>
 </head>
 <body>
@@ -224,7 +254,7 @@
           <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
           <p class="option-label">Multiplayer:</p>
           <label class="switch" style="font-size:1.5em; margin-top:16px;">
-            <input type="checkbox" id="multiplayer-toggle" checked>
+            <input type="checkbox" id="multiplayer-toggle">
             <span class="slider"></span>
           </label>
           <p class="option-label">Fundo do Jogo:</p>
@@ -333,21 +363,21 @@
 
     // SONS e MÚSICAS
     const soundUrls = {
-      click: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_510b65f726.mp3',
-      collect: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_9857d42551.mp3',
-      attack: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_596956241b.mp3',
-      damage: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_2d0d341999.mp3',
-      explosion: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_02c63f114c.mp3',
-      step: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_d0df472146.mp3',
-      potion: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_a1752b1239.mp3',
-      bow: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_b72b9845d0.mp3',
-      mine: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c3c3321591.mp3',
+      click: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/click.mp3',
+      collect: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/collect.mp3',
+      attack: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/attack.mp3',
+      damage: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/damage.mp3',
+      explosion: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/explosion.mp3',
+      step: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/step.mp3',
+      potion: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/potion.mp3',
+      bow: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/bow.mp3',
+      mine: 'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/mine.mp3',
     };
 
     const musicUrls = [
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7acb85055b.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_d4420e6c46.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7314743c7b.mp3',
+      'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/music1.mp3',
+      'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/music2.mp3',
+      'https://cdn.glitch.global/03c1e22d-625d-4f81-a790-a54817a39396/music3.mp3',
     ];
 
     const sounds = {};
@@ -403,14 +433,10 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         
-        // Novo cálculo de zoom para mobile
         if (isMobile) {
           const gameAspect = MAPA_LARGURA / MAPA_ALTURA;
           const screenAspect = window.innerWidth / window.innerHeight;
-          // Zoom para preencher a tela sem distorcer, focando em manter a área de jogo visível
-          CAMERA_ZOOM = Math.min(window.innerWidth / MAPA_LARGURA, window.innerHeight / MAPA_ALTURA);
-          // Adiciona um pouco de zoom para que o jogador não seja minúsculo
-          CAMERA_ZOOM = Math.max(0.5, CAMERA_ZOOM);
+          CAMERA_ZOOM = Math.min(window.innerWidth / MAPA_LARGURA, window.innerHeight / MAPA_ALTURA) * 1.5;
         } else {
             CAMERA_ZOOM = 1;
         }
@@ -454,9 +480,8 @@
     ];
     let hotbarSelecionado = 0;
     
-    // Multiplayer (ativado)
     let ws = null;
-    let isMultiplayerEnabled = multiplayerToggle.checked;
+    let isMultiplayerEnabled = false;
     let otherPlayers = {};
 
     function setupMultiplayer() {
@@ -471,7 +496,7 @@
         
         ws.onopen = () => {
             console.log('Conectado ao servidor WebSocket');
-            player.id = Date.now().toString(); // ID único para o jogador
+            player.id = Date.now().toString();
         };
 
         ws.onmessage = (event) => {
@@ -503,7 +528,8 @@
                 y: player.y,
                 color: player.color,
                 vida: player.vida,
-                armadura: player.armadura
+                armadura: player.armadura,
+                hotbarItem: hotbarItens[hotbarSelecionado].id
             };
             ws.send(JSON.stringify({ type: 'playerUpdate', player: playerState }));
         }
@@ -511,29 +537,31 @@
 
 
     function renderHotbar() {
-      const hotbarElement = document.getElementById('hotbar');
-      if (!hotbarElement) return;
-      hotbarElement.innerHTML = '';
-      hotbarItens.forEach((item, i) => {
-        const slot = document.createElement('div');
-        slot.className = `slot`;
-        if (hotbarSelecionado === i) {
-          slot.classList.add('active');
-        }
-        slot.innerHTML = `<span>${item.emoji}</span>`;
-        if (inventory[item.id] !== undefined) {
-          const count = document.createElement('span');
-          count.className = 'item-count';
-          if (typeof inventory[item.id] === 'boolean') {
-            count.textContent = inventory[item.id] ? '✔️' : '';
-          } else {
-            count.textContent = inventory[item.id] > 0 ? inventory[item.id] : '';
-          }
-          slot.appendChild(count);
-        }
-        slot.onclick = () => { playSound('click'); hotbarSelecionado = i; renderHotbar(); };
-        hotbarElement.appendChild(slot);
-      });
+        const hotbarElement = document.getElementById('hotbar');
+        if (!hotbarElement) return;
+        hotbarElement.innerHTML = '';
+        hotbarItens.forEach((item, i) => {
+            const slot = document.createElement('div');
+            slot.className = `slot`;
+            if (hotbarSelecionado === i) {
+                slot.classList.add('active');
+            }
+            slot.innerHTML = `<span>${item.emoji}</span>`;
+            
+            const count = document.createElement('span');
+            count.className = 'item-count';
+            if (inventory[item.id] !== undefined) {
+                if (typeof inventory[item.id] === 'boolean') {
+                    count.textContent = inventory[item.id] ? '✔️' : '';
+                } else {
+                    count.textContent = inventory[item.id] > 0 ? inventory[item.id] : '';
+                }
+            }
+            slot.appendChild(count);
+
+            slot.onclick = () => { playSound('click'); hotbarSelecionado = i; renderHotbar(); };
+            hotbarElement.appendChild(slot);
+        });
     }
 
     let particles = [];
@@ -782,6 +810,16 @@
         gameOptionsMenu.style.display = 'none';
         optionsMenu.style.display = 'flex';
     };
+    
+    // Toggle multiplayer
+    multiplayerToggle.addEventListener('change', () => {
+        isMultiplayerEnabled = multiplayerToggle.checked;
+        if (!isMultiplayerEnabled && ws) {
+            ws.close();
+            ws = null;
+            otherPlayers = {};
+        }
+    });
 
     // Opções de Jogo
     function applyGameOptions() {
@@ -811,7 +849,7 @@
 
     function updateInventory() {
         const invDiv = document.getElementById('inv');
-        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 🏹: ${inventory.flechas} | 💎: ${inventory.gema} | 🧪: ${inventory.pocao}</span>`;
+        let txt = `<span>🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 🏹: ${inventory.flechas} | 💎: ${inventory.gema} | 🧪: ${inventory.pocao}</span>`;
         invDiv.innerHTML = txt;
         renderHotbar();
     }
@@ -820,7 +858,7 @@
       const craftDiv = document.getElementById('craft');
       let txt = `<b>Construção:</b> `;
       const item = hotbarItens[hotbarSelecionado].id;
-      if (item === buildMode) {
+      if (buildMode && buildMode === item) {
           txt += `${hotbarItens.find(i=>i.id===item).emoji} ${hotbarItens.find(i=>i.id===item).nome}`;
       } else {
           txt += '<span style="color:#aaa">Nenhum</span>';
@@ -938,7 +976,7 @@
     function attackEnemy() {
       if (!inventory.espada) return;
       playSound('attack');
-      const attackPower = inventory.espada ? 1 : 0;
+      const attackPower = 1;
       for (let e of enemies) {
         if (!e.alive) continue;
         const dx = player.x + player.size/2 - (e.x + e.size/2);
@@ -967,7 +1005,7 @@
     
     function usePickaxeAt(x, y) {
       if (!inventory.picareta && !inventory.superpicareta) return;
-      playSound('attack');
+      playSound('mine');
       const radius = inventory.superpicareta ? 120 : 48;
       for (let i = materials.length-1; i >= 0; i--) {
         const m = materials[i];
@@ -997,38 +1035,31 @@
     function buildAt(x, y) {
       if (!buildMode) return;
       
-      let item = hotbarItens[hotbarSelecionado].id;
+      const item = hotbarItens[hotbarSelecionado].id;
       if (item === 'tocha' && inventory.tocha > 0) {
         playSound('click');
         torches.push({ x: x-12, y: y-12, size: 24 }); inventory.tocha--; updateInventory();
-        buildMode = null;
       } else if (item === 'parede_madeira' && inventory.parede_madeira > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
         inventory.parede_madeira--; updateInventory();
-        buildMode = null;
       } else if (item === 'parede_pedra' && inventory.parede_pedra > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_pedra' });
         inventory.parede_pedra--; updateInventory();
-        buildMode = null;
       } else if (item === 'armadilha' && inventory.armadilha > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'armadilha' });
         inventory.armadilha--; updateInventory();
-        buildMode = null;
       } else if (item === 'mina' && inventory.mina > 0) {
         playSound('click');
         bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.mina--; updateInventory();
-        buildMode = null;
       } else if (item === 'fogueira' && inventory.fogueira > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'fogueira' });
         inventory.fogueira--; updateInventory();
-        buildMode = null;
-      } else {
-        buildMode = null;
       }
+      buildMode = null;
       updateCrafting();
     }
     
@@ -1049,7 +1080,7 @@
     
     function spawnMaterials() {
       materials = [];
-      const spawnChance = isDay ? 0.05 : 0.02; // Gems são mais raras à noite
+      const spawnChance = isDay ? 0.05 : 0.02;
       for (let i = 0; i < 12; i++) {
         materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 32, type: 'madeira' });
       }
@@ -1090,7 +1121,6 @@
     }
     
     function updateCamera() {
-      // Ajuste imediato da câmera para o centro do jogador
       camera.x = player.x + player.size / 2 - W() / (2 * CAMERA_ZOOM);
       camera.y = player.y + player.size / 2 - H() / (2 * CAMERA_ZOOM);
       
@@ -1492,7 +1522,7 @@
       ctx.stroke();
       ctx.restore();
     
-      if (ent.espada) {
+      if (ent.hotbarItem === 'espada' || ent.espada) {
         ctx.save();
         ctx.translate(ent.x+ent.size, ent.y+ent.size/2);
         ctx.rotate(-0.2);
@@ -1503,7 +1533,7 @@
         ctx.strokeRect(0, -5, 22, 10);
         ctx.restore();
       }
-      if (ent.picareta) {
+      if (ent.hotbarItem === 'picareta' || ent.picareta) {
         ctx.save();
         ctx.translate(ent.x-10, ent.y+ent.size/2);
         ctx.fillStyle = '#888';
@@ -1511,7 +1541,7 @@
         ctx.fillRect(7, -12, 5, 18);
         ctx.restore();
       }
-      if (ent.superpicareta) {
+      if (ent.hotbarItem === 'superpicareta' || ent.superpicareta) {
         ctx.save();
         ctx.translate(ent.x-18, ent.y+ent.size/2-18);
         ctx.fillStyle = '#0ff';
@@ -1523,7 +1553,7 @@
         ctx.stroke();
         ctx.restore();
       }
-      if (ent.arco) {
+      if (ent.hotbarItem === 'arco' || ent.arco) {
         ctx.save();
         ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
         ctx.strokeStyle = '#a4a4a4';
