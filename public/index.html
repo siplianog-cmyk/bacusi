@@ -289,9 +289,7 @@
     <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
   </div>
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
-
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
     const startMenu = document.getElementById('start-menu');
     const optionsMenu = document.getElementById('options-menu');
@@ -407,21 +405,14 @@
         
         // Novo cálculo de zoom para mobile
         if (isMobile) {
-            const aspect = window.innerWidth / window.innerHeight;
-            const gameAspect = MAPA_LARGURA / MAPA_ALTURA;
-            if (aspect > gameAspect) {
-              CAMERA_ZOOM = window.innerHeight / MAPA_ALTURA;
-            } else {
-              CAMERA_ZOOM = window.innerWidth / MAPA_LARGURA;
-            }
+          const gameAspect = MAPA_LARGURA / MAPA_ALTURA;
+          const screenAspect = window.innerWidth / window.innerHeight;
+          // Zoom para preencher a tela sem distorcer, focando em manter a área de jogo visível
+          CAMERA_ZOOM = Math.min(window.innerWidth / MAPA_LARGURA, window.innerHeight / MAPA_ALTURA);
+          // Adiciona um pouco de zoom para que o jogador não seja minúsculo
+          CAMERA_ZOOM = Math.max(0.5, CAMERA_ZOOM);
         } else {
             CAMERA_ZOOM = 1;
-        }
-        
-        if (isMobile) {
-            const minZoom = 0.5;
-            const maxZoom = 1.2;
-            CAMERA_ZOOM = Math.max(minZoom, Math.min(maxZoom, CAMERA_ZOOM));
         }
     }
 
@@ -463,142 +454,8 @@
     ];
     let hotbarSelecionado = 0;
     
-    // Multiplayer
-    const SOCKET_SERVER_URL = "https://survival-game-server-b05c192d774f.herokuapp.com/"; // Nova URL de servidor
-    let socket = null;
-    let selfId = null;
-    const otherPlayers = {};
-    let isMultiplayerEnabled = true;
-
-    function connectSocket() {
-      if (!isMultiplayerEnabled) {
-          if (socket) disconnectSocket();
-          return;
-      }
-      if (socket && socket.connected) return;
-
-      try {
-        socket = io(SOCKET_SERVER_URL, { 
-            transports: ['websocket'], 
-            reconnectionAttempts: 5,
-            timeout: 5000,
-        });
-
-        socket.on('connect', () => { 
-            selfId = socket.id;
-            player.id = selfId;
-            player.color = colorPicker.value;
-            console.log('Conectado ao servidor com ID:', selfId);
-            announceSelf();
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Desconectado do servidor.');
-            for (const id in otherPlayers) {
-                delete otherPlayers[id];
-            }
-        });
-        
-        socket.on('connect_error', (err) => {
-            console.warn('Erro de conexão:', err);
-        });
-
-        socket.on('currentPlayers', (players) => {
-            for (let id in players) {
-              if (id !== socket.id) {
-                otherPlayers[id] = players[id];
-              }
-            }
-        });
-
-        socket.on('newPlayer', (newPlayer) => {
-          if (newPlayer.id !== selfId) {
-             otherPlayers[newPlayer.id] = newPlayer;
-          }
-        });
-
-        socket.on('playerDisconnected', (playerId) => {
-          delete otherPlayers[playerId];
-        });
-        
-        socket.on('state', payload => {
-          if (!payload) return;
-          for (const id in payload) {
-              if (id !== selfId) {
-                  const existingPlayer = otherPlayers[id];
-                  if (existingPlayer) {
-                      existingPlayer.x = payload[id].x;
-                      existingPlayer.y = payload[id].y;
-                      existingPlayer.vida = payload[id].vida;
-                      existingPlayer.armadura = payload[id].armadura;
-                      existingPlayer.espada = payload[id].espada;
-                      existingPlayer.picareta = payload[id].picareta;
-                      existingPlayer.arco = payload[id].arco;
-                      existingPlayer.superpicareta = payload[id].superpicareta;
-                      existingPlayer.color = payload[id].color;
-                      existingPlayer.effectTimer = payload[id].effectTimer;
-                  } else {
-                      otherPlayers[id] = payload[id];
-                  }
-              }
-          }
-        });
-        
-        socket.on('leave', id => { delete otherPlayers[id]; });
-
-      } catch (e) {
-        console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
-      }
-    }
-    
-    function disconnectSocket() {
-        if (socket) {
-            socket.disconnect();
-            socket = null;
-        }
-    }
-
-    function announceSelf() {
-        if (socket && socket.connected) {
-            socket.emit('playerState', {
-                id: player.id,
-                x: player.x,
-                y: player.y,
-                vida: player.vida,
-                armadura: inventory.armadura,
-                espada: inventory.espada,
-                picareta: inventory.picareta,
-                arco: inventory.arco,
-                superpicareta: inventory.superpicareta,
-                color: player.color,
-                effectTimer: player.effectTimer
-            });
-        }
-    }
-
-    let lastSentState = 0;
-    const STATE_SEND_INTERVAL = 1000 / 20;
-
-    function throttleSendState() {
-      if (socket && socket.connected) {
-        const now = performance.now();
-        if (now - lastSentState > STATE_SEND_INTERVAL) {
-          socket.emit('playerState', {
-            x: player.x,
-            y: player.y,
-            vida: player.vida,
-            armadura: inventory.armadura,
-            espada: inventory.espada,
-            picareta: inventory.picareta,
-            arco: inventory.arco,
-            superpicareta: inventory.superpicareta,
-            color: player.color,
-            effectTimer: player.effectTimer
-          });
-          lastSentState = now;
-        }
-      }
-    }
+    // Multiplayer (desativado temporariamente)
+    let isMultiplayerEnabled = false;
 
     function renderHotbar() {
       const hotbarElement = document.getElementById('hotbar');
@@ -660,7 +517,7 @@
         vida: 5, 
         armadura: false, 
         invencivel: 0, 
-        id: selfId,
+        id: null,
         color: colorPicker.value,
         attackModifier: 1,
         defenseModifier: 1,
@@ -718,7 +575,6 @@
 
       restartBtn.style.display = 'none';
 
-      announceSelf();
       requestAnimationFrame(gameLoop);
       if (currentMusic) { currentMusic.pause(); }
       playNextMusic();
@@ -846,11 +702,6 @@
         startMenu.style.display = 'none';
         gameContainer.style.display = 'block';
         resetGame();
-        if (isMultiplayerEnabled) {
-            connectSocket();
-        } else {
-            disconnectSocket();
-        }
     };
     optionsBtn.onclick = () => {
         playSound('click');
@@ -861,11 +712,6 @@
     btnResume.onclick = () => {
         playSound('click');
         isMultiplayerEnabled = multiplayerToggle.checked;
-        if (isMultiplayerEnabled) {
-            connectSocket();
-        } else {
-            disconnectSocket();
-        }
         optionsMenu.style.display = 'none';
         hudPanel.style.display = 'block';
         setPause(false);
@@ -1017,7 +863,6 @@
                 player.color = newColor;
                 inventory.tinteiro_magico--;
                 updateInventory();
-                announceSelf();
             }
         }
     }
@@ -1031,7 +876,6 @@
             player.effectTimer = 30; // 30 segundos
             inventory.pocao--;
             updateInventory();
-            announceSelf();
         }
     }
     
@@ -1190,12 +1034,9 @@
     }
     
     function updateCamera() {
-      const targetX = player.x + player.size / 2 - W() / (2 * CAMERA_ZOOM);
-      const targetY = player.y + player.size / 2 - H() / (2 * CAMERA_ZOOM);
-      
-      const lerpFactor = 0.08;
-      camera.x += (targetX - camera.x) * lerpFactor;
-      camera.y += (targetY - camera.y) * lerpFactor;
+      // Ajuste imediato da câmera para o centro do jogador
+      camera.x = player.x + player.size / 2 - W() / (2 * CAMERA_ZOOM);
+      camera.y = player.y + player.size / 2 - H() / (2 * CAMERA_ZOOM);
       
       const visibleWidth = W() / CAMERA_ZOOM;
       const visibleHeight = H() / CAMERA_ZOOM;
@@ -1520,11 +1361,6 @@
           drawPlayerEntity(player, true);
       }
     
-      for (const [id, p] of Object.entries(otherPlayers)) {
-        if (!p) continue;
-        drawPlayerEntity(p, false);
-      }
-    
       for (let e of enemies) {
         if (!e.alive) continue;
         ctx.save();
@@ -1673,15 +1509,11 @@
             }
         }
         
-        let moved = movePlayer();
+        movePlayer();
         updateCamera();
         moveEnemies();
         checkCollision();
         
-        if (moved) {
-          throttleSendState();
-        }
-    
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
           b.timer -= (1000/60);
