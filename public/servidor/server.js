@@ -1,3 +1,4 @@
+// server.js (código completo - CORRIGIDO)
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -21,7 +22,10 @@ io.on('connection', (socket) => {
         espada: false, picareta: false, superpicareta: false, armadura: false,
     };
     
+    // Envia a lista completa de jogadores para o novo jogador
     socket.emit('currentPlayers', players);
+    
+    // Notifica outros jogadores sobre o novo jogador
     socket.broadcast.emit('newPlayer', players[socket.id]);
     
     socket.on('disconnect', () => {
@@ -30,15 +34,16 @@ io.on('connection', (socket) => {
         io.emit('playerDisconnected', socket.id);
     });
 
-    socket.on('state', (playerData) => {
+    // CORREÇÃO: O evento agora se chama 'playerState', igual no cliente.
+    socket.on('playerState', (playerData) => {
         if(players[socket.id]) {
             players[socket.id] = { ...players[socket.id], ...playerData };
         }
     });
-
 });
 
 setInterval(() => {
+    // CORREÇÃO: O evento agora se chama 'state' para o cliente receber o estado completo.
     io.emit('state', players);
 }, 50); // Envia o estado a cada 50ms (20 vezes por segundo)
 
