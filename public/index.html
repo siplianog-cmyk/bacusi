@@ -442,6 +442,7 @@
       { id: 'maca', nome: 'Maçã', emoji: '🍎' },
       { id: 'tocha', nome: 'Tocha', emoji: '🔥' },
       { id: 'parede_madeira', nome: 'Parede Madeira', emoji: '🟫' },
+      { id: 'parede_pedra', nome: 'Parede de Pedra', emoji: '🧱' },
       { id: 'armadilha', nome: 'Armadilha', emoji: '🕸️' },
       { id: 'mina', nome: 'Mina Explosiva', emoji: '💣' },
       { id: 'fogueira', nome: 'Fogueira', emoji: '🏕️' },
@@ -552,7 +553,7 @@
                 x: player.x,
                 y: player.y,
                 vida: player.vida,
-                armadura: player.armadura,
+                armadura: inventory.armadura,
                 espada: inventory.espada,
                 picareta: inventory.picareta,
                 arco: inventory.arco,
@@ -675,6 +676,7 @@
         tocha: 0,
         fogueira: 0,
         parede_madeira: 0,
+        parede_pedra: 0,
         armadilha: 0,
         mina: 0,
         maca: 0,
@@ -878,9 +880,6 @@
         joystickStick.style.width = joystickStick.style.height = `${joystickSizeSlider.value * 50}px`;
         joystickArea.style.left = `${joystickXSlider.value}%`;
         joystickArea.style.bottom = `${100 - joystickYSlider.value}%`;
-        btnXSlider.value = btnXSlider.value;
-        btnYSlider.value = btnYSlider.value;
-        btnYSlider.value = btnYSlider.value;
         btnAction.parentNode.style.right = `${100 - btnXSlider.value}%`;
         btnAction.parentNode.style.bottom = `${100 - btnYSlider.value}%`;
     }
@@ -944,6 +943,9 @@
       if (item === 'parede_madeira' && inventory.madeira >= 2) {
         inventory.madeira -= 2; inventory.parede_madeira += 1; updateInventory();
       }
+      if (item === 'parede_pedra' && inventory.pedra >= 2) {
+        inventory.pedra -= 2; inventory.parede_pedra += 1; updateInventory();
+      }
       if (item === 'armadilha' && inventory.madeira >= 1 && inventory.pedra >= 1) {
         inventory.madeira -= 1; inventory.pedra -= 1; inventory.armadilha += 1; updateInventory();
       }
@@ -980,7 +982,7 @@
         usarTinteiroMagico();
       } else if (item === 'pocao') {
         usarPocao();
-      } else if (item === 'tocha' || item === 'parede_madeira' || item === 'armadilha' || item === 'mina' || item === 'fogueira') {
+      } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'armadilha' || item === 'mina' || item === 'fogueira') {
         buildMode = item;
         updateCrafting();
       } else if (item === 'picareta' || item === 'superpicareta') {
@@ -1092,6 +1094,11 @@
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
         inventory.parede_madeira--; updateInventory();
+        buildMode = null;
+      } else if (item === 'parede_pedra' && inventory.parede_pedra > 0) {
+        playSound('click');
+        buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_pedra' });
+        inventory.parede_pedra--; updateInventory();
         buildMode = null;
       } else if (item === 'armadilha' && inventory.armadilha > 0) {
         playSound('click');
@@ -1474,6 +1481,22 @@
           ctx.strokeRect(b.x, b.y, b.size, b.size);
           ctx.beginPath();
           ctx.moveTo(b.x+8, b.y+b.size-8); ctx.lineTo(b.x+b.size-8, b.y+8);
+          ctx.stroke();
+          ctx.restore();
+        } else if (b.type === 'parede_pedra') {
+          ctx.save();
+          ctx.shadowColor = "#555";
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = "#607d8b";
+          ctx.strokeStyle = "#455a64";
+          ctx.lineWidth = 3;
+          ctx.fillRect(b.x, b.y, b.size, b.size);
+          ctx.strokeRect(b.x, b.y, b.size, b.size);
+          ctx.beginPath();
+          ctx.moveTo(b.x+8, b.y+8); ctx.lineTo(b.x+b.size-8, b.y+8);
+          ctx.lineTo(b.x+b.size-8, b.y+b.size-8);
+          ctx.lineTo(b.x+8, b.y+b.size-8);
+          ctx.closePath();
           ctx.stroke();
           ctx.restore();
         } else if (b.type === 'armadilha') {
