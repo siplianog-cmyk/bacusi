@@ -331,7 +331,7 @@
     
     const canvas = document.getElementById('game');
     let ctx = null;
-    const CAMERA_ZOOM = isMobile ? 0.4 : 1;
+    let CAMERA_ZOOM = 1;
 
     // SONS e MÚSICAS
     const soundUrls = {
@@ -402,6 +402,13 @@
         if (!canvas) return;
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        CAMERA_ZOOM = isMobile ? (canvas.width / 1200) : 1;
+        if (isMobile) {
+            const minZoom = 0.4;
+            const maxZoom = 1.0;
+            const newZoom = Math.max(minZoom, Math.min(maxZoom, canvas.width / 1000));
+            CAMERA_ZOOM = newZoom;
+        }
     }
 
     const W = () => canvas.width;
@@ -1134,12 +1141,12 @@
     }
     
     function updateCamera() {
-      const targetX = player.x + player.size/2;
-      const targetY = player.y + player.size/2;
-      camera.x = targetX - (W() / 2) / CAMERA_ZOOM;
-      camera.y = targetY - (H() / 2) / CAMERA_ZOOM;
-      camera.x = Math.max(0, Math.min(MAPA_LARGURA - W()/CAMERA_ZOOM, camera.x));
-      camera.y = Math.max(0, Math.min(MAPA_ALTURA - H()/CAMERA_ZOOM, camera.y));
+      const targetX = player.x + player.size / 2;
+      const targetY = player.y + player.size / 2;
+      camera.x = targetX - W() / (2 * CAMERA_ZOOM);
+      camera.y = targetY - H() / (2 * CAMERA_ZOOM);
+      camera.x = Math.max(0, Math.min(MAPA_LARGURA - W() / CAMERA_ZOOM, camera.x));
+      camera.y = Math.max(0, Math.min(MAPA_ALTURA - H() / CAMERA_ZOOM, camera.y));
     }
     
     function moveEnemies() {
@@ -1318,11 +1325,13 @@
       ctx.fillRect(MAPA_LARGURA - 200, 0, 20, MAPA_ALTURA);
       ctx.restore();
       
-      ctx.save();
-      ctx.fillStyle = '#006400';
-      ctx.fillRect(MAPA_LARGURA * 0.45, 0, MAPA_LARGURA * 0.55, MAPA_ALTURA);
-      ctx.restore();
-
+      if (florestaDesbloqueada) {
+        ctx.save();
+        ctx.fillStyle = '#006400';
+        ctx.fillRect(MAPA_LARGURA * 0.45, 0, MAPA_LARGURA * 0.55, MAPA_ALTURA);
+        ctx.restore();
+      }
+      
       if (montanhaLiberada) {
         ctx.save();
         ctx.globalAlpha = 0.9;
