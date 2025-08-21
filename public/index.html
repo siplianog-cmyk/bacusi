@@ -53,6 +53,17 @@
     }
     .overlay-menu button:hover { background: #fff176; }
     
+    /* Rolagem para o menu de opções */
+    .scrollable-content {
+        overflow-y: auto;
+        max-height: 80vh;
+        padding: 20px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
     /* HUD */
     #hud-panel {
       position: absolute;
@@ -205,35 +216,39 @@
   </div>
   
   <div id="options-menu" class="overlay-menu" style="display: none;">
-      <h1>Opções</h1>
-      <p class="option-label">Volume do Jogo:</p>
-      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
-      <p class="option-label">Multiplayer:</p>
-      <label class="switch" style="font-size:1.5em; margin-top:16px;">
-        <input type="checkbox" id="multiplayer-toggle" checked>
-        <span class="slider"></span>
-      </label>
-      <button id="btn-game-options">Opções de Jogo</button>
-      <button id="btn-resume">Continuar</button>
+      <div class="scrollable-content">
+          <h1>Opções</h1>
+          <p class="option-label">Volume do Jogo:</p>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
+          <p class="option-label">Multiplayer:</p>
+          <label class="switch" style="font-size:1.5em; margin-top:16px;">
+            <input type="checkbox" id="multiplayer-toggle" checked>
+            <span class="slider"></span>
+          </label>
+          <button id="btn-game-options">Opções de Jogo</button>
+          <button id="btn-resume">Continuar</button>
+      </div>
   </div>
   
   <div id="game-options-menu" class="overlay-menu" style="display: none;">
-      <h1>Configurações de Jogo</h1>
-      <p class="option-label">Tamanho da HUD:</p>
-      <input type="range" id="hud-size-slider" min="0.5" max="2" step="0.1" value="1">
-      <p class="option-label">Tamanho dos Botões:</p>
-      <input type="range" id="btn-size-slider" min="0.5" max="2" step="0.1" value="1">
-      <p class="option-label">Tamanho do Joystick:</p>
-      <input type="range" id="joystick-size-slider" min="0.5" max="2" step="0.1" value="1">
-      <p class="option-label">Posição do Joystick (Horizontal):</p>
-      <input type="range" id="joystick-x-slider" min="10" max="90" step="1" value="20">
-      <p class="option-label">Posição do Joystick (Vertical):</p>
-      <input type="range" id="joystick-y-slider" min="10" max="90" step="1" value="80">
-      <p class="option-label">Posição dos Botões (Horizontal):</p>
-      <input type="range" id="btn-x-slider" min="10" max="90" step="1" value="85">
-      <p class="option-label">Posição dos Botões (Vertical):</p>
-      <input type="range" id="btn-y-slider" min="10" max="90" step="1" value="80">
-      <button id="btn-back-options">Voltar</button>
+      <div class="scrollable-content">
+          <h1>Configurações de Jogo</h1>
+          <p class="option-label">Tamanho da HUD:</p>
+          <input type="range" id="hud-size-slider" min="0.5" max="2" step="0.1" value="1">
+          <p class="option-label">Tamanho dos Botões:</p>
+          <input type="range" id="btn-size-slider" min="0.5" max="2" step="0.1" value="1">
+          <p class="option-label">Tamanho do Joystick:</p>
+          <input type="range" id="joystick-size-slider" min="0.5" max="2" step="0.1" value="1">
+          <p class="option-label">Posição do Joystick (Horizontal):</p>
+          <input type="range" id="joystick-x-slider" min="10" max="90" step="1" value="20">
+          <p class="option-label">Posição do Joystick (Vertical):</p>
+          <input type="range" id="joystick-y-slider" min="10" max="90" step="1" value="80">
+          <p class="option-label">Posição dos Botões (Horizontal):</p>
+          <input type="range" id="btn-x-slider" min="10" max="90" step="1" value="85">
+          <p class="option-label">Posição dos Botões (Vertical):</p>
+          <input type="range" id="btn-y-slider" min="10" max="90" step="1" value="80">
+          <button id="btn-back-options">Voltar</button>
+      </div>
   </div>
 
   <div id="game-container">
@@ -270,6 +285,7 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
 
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
     const startMenu = document.getElementById('start-menu');
     const optionsMenu = document.getElementById('options-menu');
     const gameOptionsMenu = document.getElementById('game-options-menu');
@@ -293,6 +309,11 @@
     const joystickYSlider = document.getElementById('joystick-y-slider');
     const btnXSlider = document.getElementById('btn-x-slider');
     const btnYSlider = document.getElementById('btn-y-slider');
+
+    if (!isMobile) {
+        joystickArea.style.display = 'none';
+        document.getElementById('action-buttons').style.display = 'none';
+    }
     
     const MAPA_LARGURA = 2400;
     const MAPA_ALTURA = 1200;
@@ -313,9 +334,9 @@
     };
 
     const musicUrls = [
-      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm1.mp3',
-      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm2.mp3',
-      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/bgm3.mp3',
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/cinematic1.mp3',
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/cinematic2.mp3',
+      'https://cdn.jsdelivr.net/gh/jake-f/assets/music/cinematic3.mp3',
     ];
 
     const sounds = {};
@@ -415,6 +436,15 @@
     const otherPlayers = {};
     let isMultiplayerEnabled = true;
 
+    function getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
     function connectSocket() {
       if (!isMultiplayerEnabled) return;
       if (socket && socket.connected) return;
@@ -428,6 +458,7 @@
         socket.on('connect', () => { 
             selfId = socket.id;
             player.id = selfId;
+            player.color = getRandomColor();
             console.log('Conectado ao servidor com ID:', selfId);
             announceSelf();
         });
@@ -465,7 +496,17 @@
           if (!payload) return;
           for (const id in payload) {
               if (id !== selfId) {
-                  otherPlayers[id] = payload[id];
+                  const existingPlayer = otherPlayers[id];
+                  if (existingPlayer) {
+                      existingPlayer.x = payload[id].x;
+                      existingPlayer.y = payload[id].y;
+                      existingPlayer.vida = payload[id].vida;
+                      existingPlayer.armadura = payload[id].armadura;
+                      existingPlayer.espada = payload[id].espada;
+                      existingPlayer.picareta = payload[id].picareta;
+                  } else {
+                      otherPlayers[id] = payload[id];
+                  }
               }
           }
         });
@@ -493,7 +534,8 @@
                 vida: player.vida,
                 armadura: player.armadura,
                 espada: inventory.espada,
-                picareta: inventory.picareta
+                picareta: inventory.picareta,
+                color: player.color
             });
         }
     }
@@ -512,6 +554,7 @@
             armadura: inventory.armadura,
             espada: inventory.espada,
             picareta: inventory.picareta,
+            color: player.color
           });
           lastSentState = now;
         }
@@ -576,7 +619,8 @@
         vida: 5, 
         armadura: false, 
         invencivel: 0, 
-        id: selfId 
+        id: selfId,
+        color: 'deepskyblue' 
       };
       enemies = [];
       materials = [];
@@ -691,53 +735,58 @@
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     
     // Botões mobile
-    btnAction.addEventListener('touchstart', e => { e.preventDefault(); usarHotbarAtMouse(); }, {passive:false});
-    btnCreate.addEventListener('touchstart', e => { e.preventDefault(); craftSelectedItem(); }, {passive:false});
-    
+    if (isMobile) {
+        btnAction.addEventListener('touchstart', e => { e.preventDefault(); usarHotbarAtMouse(); }, {passive:false});
+        btnCreate.addEventListener('touchstart', e => { e.preventDefault(); craftSelectedItem(); }, {passive:false});
+    }
+
     // Joystick
-    const joystickMaxRadius = joystickBase.clientWidth / 2;
-    joystickArea.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (joystickTouchId !== null) return;
-        const t = e.changedTouches[0];
-        joystickTouchId = t.identifier;
-    }, { passive: false });
-
-    joystickArea.addEventListener('touchmove', (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
-            if (touch.identifier === joystickTouchId) {
-                const rect = joystickArea.getBoundingClientRect();
-                let x = touch.clientX - rect.left - joystickMaxRadius;
-                let y = touch.clientY - rect.top - joystickMaxRadius;
-                const distance = Math.hypot(x, y);
-                if (distance > joystickMaxRadius) {
-                    const angle = Math.atan2(y, x);
-                    x = Math.cos(angle) * joystickMaxRadius;
-                    y = Math.sin(angle) * joystickMaxRadius;
+    if (isMobile) {
+        const joystickMaxRadius = joystickBase.clientWidth / 2;
+        joystickArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (joystickTouchId !== null) return;
+            const t = e.changedTouches[0];
+            joystickTouchId = t.identifier;
+        }, { passive: false });
+    
+        joystickArea.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === joystickTouchId) {
+                    const rect = joystickArea.getBoundingClientRect();
+                    let x = touch.clientX - rect.left - joystickMaxRadius;
+                    let y = touch.clientY - rect.top - joystickMaxRadius;
+                    const distance = Math.hypot(x, y);
+                    if (distance > joystickMaxRadius) {
+                        const angle = Math.atan2(y, x);
+                        x = Math.cos(angle) * joystickMaxRadius;
+                        y = Math.sin(angle) * joystickMaxRadius;
+                    }
+                    joystickStick.style.transform = `translate(${x}px, ${y}px)`;
+                    
+                    const deadzone = 20;
+                    keyboard['w'] = y < -deadzone;
+                    keyboard['s'] = y > deadzone;
+                    keyboard['a'] = x < -deadzone;
+                    keyboard['d'] = x > deadzone;
+                    break;
                 }
-                joystickStick.style.transform = `translate(${x}px, ${y}px)`;
-                
-                const deadzone = 20;
-                keyboard['w'] = y < -deadzone;
-                keyboard['s'] = y > deadzone;
-                keyboard['a'] = x < -deadzone;
-                keyboard['d'] = x > deadzone;
-                break;
             }
-        }
-    }, { passive: false });
+        }, { passive: false });
+    
+        joystickArea.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    joystickTouchId = null;
+                    joystickStick.style.transform = `translate(-50%, -50%)`;
+                    keyboard['w'] = keyboard['s'] = keyboard['a'] = keyboard['d'] = false;
+                    break;
+                }
+            }
+        });
+    }
 
-    joystickArea.addEventListener('touchend', (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === joystickTouchId) {
-                joystickTouchId = null;
-                joystickStick.style.transform = `translate(-50%, -50%)`;
-                keyboard['w'] = keyboard['s'] = keyboard['a'] = keyboard['d'] = false;
-                break;
-            }
-        }
-    });
 
     // Menus
     btnStart.onclick = () => {
@@ -1050,7 +1099,7 @@
         }
       }
       for (let a of apples) {
-        if (!a.collected && player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + player.size > a.y) {
+        if (!a.collected && player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + a.size > a.y) {
           playSound('collect');
           inventory.maca++; a.collected = true; updateInventory();
         }
@@ -1320,10 +1369,10 @@
       if (!ctx || !ent) return;
       ctx.save();
       ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
-      ctx.shadowColor = isSelf ? "#00bfff" : "#00ff95";
+      ctx.shadowColor = ent.color;
       ctx.shadowBlur = 18;
       ctx.globalAlpha = ent.invencivel > 0 ? 0.5 : 1;
-      ctx.fillStyle = isSelf ? 'deepskyblue' : '#36e3a0';
+      ctx.fillStyle = ent.color;
       ctx.beginPath();
       ctx.arc(0, 0, ent.size/2, 0, 2*Math.PI);
       ctx.fill();
