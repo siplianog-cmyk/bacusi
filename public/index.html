@@ -325,7 +325,7 @@
     
     const canvas = document.getElementById('game');
     let ctx = null;
-    const CAMERA_ZOOM = isMobile ? 0.7 : 1;
+    const CAMERA_ZOOM = isMobile ? 0.4 : 1;
 
     // SONS e MÚSICAS
     const soundUrls = {
@@ -720,8 +720,8 @@
 
     canvas.addEventListener('mousemove', e=>{
       const rect = canvas.getBoundingClientRect();
-      mouseWorld.x = e.clientX - rect.left + camera.x;
-      mouseWorld.y = e.clientY - rect.top + camera.y;
+      mouseWorld.x = e.clientX / CAMERA_ZOOM - rect.left/CAMERA_ZOOM + camera.x/CAMERA_ZOOM;
+      mouseWorld.y = e.clientY / CAMERA_ZOOM - rect.top/CAMERA_ZOOM + camera.y/CAMERA_ZOOM;
     });
 
     canvas.addEventListener('mousedown', e => {
@@ -1090,8 +1090,8 @@
     }
     
     function updateCamera() {
-      camera.x = player.x - W() / 2 / CAMERA_ZOOM + player.size / 2;
-      camera.y = player.y - H() / 2 / CAMERA_ZOOM + player.size / 2;
+      camera.x = (player.x + player.size/2) - (W() / 2) / CAMERA_ZOOM;
+      camera.y = (player.y + player.size/2) - (H() / 2) / CAMERA_ZOOM;
     }
     
     function moveEnemies() {
