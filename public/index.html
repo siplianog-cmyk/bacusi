@@ -36,7 +36,7 @@
         text-shadow: 2px 2px 12px #000;
         color: #ffe066;
     }
-    .overlay-menu button {
+    .overlay-menu button, .overlay-menu input[type="range"] {
         padding: 12px 36px;
         font-size: 1.5em;
         border-radius: 12px;
@@ -48,6 +48,8 @@
         box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         transition: background 0.2s;
         margin-top: 24px;
+        width: 80%;
+        max-width: 300px;
     }
     .overlay-menu button:hover { background: #fff176; }
     
@@ -200,6 +202,11 @@
         #joystick-area { display: block; }
         #hotbar { display: none; }
     }
+    
+    .option-label {
+        font-size: 1em;
+        margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -210,7 +217,13 @@
   
   <div id="options-menu" class="overlay-menu" style="display: none;">
       <h1>Opções</h1>
-      <p>Nenhuma opção por enquanto.</p>
+      <p class="option-label">Volume do Jogo:</p>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
+      <p class="option-label">Multiplayer:</p>
+      <label class="switch" style="font-size:1.5em; margin-top:16px;">
+        <input type="checkbox" id="multiplayer-toggle" checked>
+        <span class="slider"></span>
+      </label>
       <button id="btn-resume">Continuar</button>
   </div>
 
@@ -259,6 +272,8 @@
     const joystickArea = document.getElementById('joystick-area');
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
+    const volumeSlider = document.getElementById('volume-slider');
+    const multiplayerToggle = document.getElementById('multiplayer-toggle');
     
     const MAPA_LARGURA = 2400;
     const MAPA_ALTURA = 1200;
@@ -267,6 +282,27 @@
     
     const canvas = document.getElementById('game');
     let ctx = null;
+
+    // SONS
+    const sounds = {
+        click: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
+        collect: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'),
+        attack: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'),
+        damage: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'),
+    };
+    
+    function playSound(soundName) {
+        if (sounds[soundName]) {
+            sounds[soundName].volume = volumeSlider.value;
+            sounds[soundName].play().catch(e => console.log("Erro ao tocar o som:", e));
+        }
+    }
+    
+    volumeSlider.addEventListener('input', (e) => {
+        for (let sound in sounds) {
+            sounds[sound].volume = e.target.value;
+        }
+    });
 
     function initCanvas() {
         if (!canvas) {
@@ -325,7 +361,7 @@
     let socket = null;
     let selfId = null;
     const otherPlayers = {};
-    const isMultiplayerEnabled = true;
+    let isMultiplayerEnabled = true;
 
     function connectSocket() {
       if (!isMultiplayerEnabled) return;
@@ -346,6 +382,10 @@
 
         socket.on('disconnect', () => {
             console.log('Desconectado do servidor.');
+            // Limpa outros jogadores para evitar fantasmas
+            for (const id in otherPlayers) {
+                delete otherPlayers[id];
+            }
         });
         
         socket.on('connect_error', (err) => {
@@ -361,7 +401,9 @@
         });
 
         socket.on('newPlayer', (newPlayer) => {
-          otherPlayers[newPlayer.id] = newPlayer;
+          if (newPlayer.id !== selfId) {
+             otherPlayers[newPlayer.id] = newPlayer;
+          }
         });
 
         socket.on('playerDisconnected', (playerId) => {
@@ -382,6 +424,13 @@
       } catch (e) {
         console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
       }
+    }
+    
+    function disconnectSocket() {
+        if (socket) {
+            socket.disconnect();
+            socket = null;
+        }
     }
 
     function announceSelf() {
@@ -439,7 +488,7 @@
           }
           slot.appendChild(count);
         }
-        slot.onclick = () => { hotbarSelecionado = i; renderHotbar(); };
+        slot.onclick = () => { playSound('click'); hotbarSelecionado = i; renderHotbar(); };
         hotbarElement.appendChild(slot);
       });
     }
@@ -461,7 +510,7 @@
     resetParticles();
     window.addEventListener('resize', resetParticles);
 
-    let player, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused;
+    let player, enemies, materials, buildings, torches, apples, gems, running, startTime, elapsed, inventory, isDay, dayLength, buildMode, dias, montanhaLiberada, dayTransitionActive, lastDay, paused, mouseWorld = { x: 0, y: 0 };
     let bombs = [];
     let joystickTimeout = null;
     let joystickTouchId = null;
@@ -557,6 +606,7 @@
 
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
+      playSound('click');
       if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % 10;
       else hotbarSelecionado = (hotbarSelecionado + 9) % 10;
       renderHotbar();
@@ -571,10 +621,17 @@
     canvas.addEventListener('mousedown', e => {
       e.preventDefault();
       if (e.button === 0) { // Botão esquerdo do mouse
-          usarHotbarAtMouse();
-      } else if (e.button === 2) { // Botão direito
-          buildMode = null;
-          updateCrafting();
+        const item = hotbarItens[hotbarSelecionado].id;
+        if (item === 'espada') {
+          attackEnemy();
+        } else if (item === 'maca') {
+          usarMaca();
+        } else if (item === 'picareta') {
+          usePickaxeAt(mouseWorld.x, mouseWorld.y);
+        } else {
+          // Itens de construção, como paredes ou tochas
+          buildAt(mouseWorld.x, mouseWorld.y);
+        }
       }
     });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -629,17 +686,30 @@
 
     // Menus
     btnStart.onclick = () => {
+        playSound('click');
         startMenu.style.display = 'none';
         gameContainer.style.display = 'block';
         resetGame();
-        connectSocket();
+        if (isMultiplayerEnabled) {
+            connectSocket();
+        } else {
+            disconnectSocket();
+        }
     };
     optionsBtn.onclick = () => {
+        playSound('click');
         setPause(true);
         optionsMenu.style.display = 'flex';
         hudPanel.style.display = 'none';
     };
     btnResume.onclick = () => {
+        playSound('click');
+        isMultiplayerEnabled = multiplayerToggle.checked;
+        if (isMultiplayerEnabled) {
+            connectSocket();
+        } else {
+            disconnectSocket();
+        }
         optionsMenu.style.display = 'none';
         hudPanel.style.display = 'block';
         setPause(false);
@@ -655,9 +725,9 @@
     function updateCrafting() {
       const craftDiv = document.getElementById('craft');
       let txt = `<b>Modo Construção:</b> `;
-      if (buildMode) {
-          const item = hotbarItens.find(i => i.id === buildMode);
-          txt += item ? `${item.emoji} ${item.nome}` : 'Desconhecido';
+      const item = hotbarItens[hotbarSelecionado];
+      if (item && item.id === buildMode) {
+          txt += `${item.emoji} ${item.nome}`;
       } else {
           txt += '<span style="color:#aaa">Nenhum</span>';
       }
@@ -673,6 +743,7 @@
     }
 
     function craftSelectedItem() {
+      playSound('click');
       const item = hotbarItens[hotbarSelecionado].id;
       if (item === 'espada' && !inventory.espada && inventory.madeira >= 3 && inventory.pedra >= 2) {
         inventory.madeira -= 3; inventory.pedra -= 2; inventory.espada = true; updateInventory();
@@ -715,7 +786,6 @@
       } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
         buildMode = item;
         updateCrafting();
-        buildAt(mouseWorld.x, mouseWorld.y);
       } else if (item === 'picareta') {
         usePickaxeAt(mouseWorld.x, mouseWorld.y);
       }
@@ -723,12 +793,14 @@
     
     function usarMaca() {
       if (inventory.maca > 0 && player.vida < 5) {
+        playSound('collect');
         inventory.maca--; player.vida = Math.min(5, player.vida + 2); updateInventory(); updateVida();
       }
     }
     
     function attackEnemy() {
       if (!inventory.espada) return;
+      playSound('attack');
       for (let e of enemies) {
         if (!e.alive) continue;
         const dx = player.x + player.size/2 - (e.x + e.size/2);
@@ -740,6 +812,7 @@
     
     function usePickaxeAt(x, y) {
       if (!inventory.picareta && !inventory.superpicareta) return;
+      playSound('attack');
       const radius = inventory.superpicareta ? 120 : 48;
       for (let i = materials.length-1; i >= 0; i--) {
         const m = materials[i];
@@ -766,21 +839,32 @@
     }
     
     function buildAt(x, y) {
-      if (buildMode === 'parede_madeira' && inventory.parede_madeira > 0) {
+      if (!buildMode) return;
+      
+      let item = hotbarItens[hotbarSelecionado].id;
+      if (item === 'tocha' && inventory.tocha > 0) {
+        playSound('click');
+        torches.push({ x: x-12, y: y-12, size: 24 }); inventory.tocha--; updateInventory();
+        buildMode = null;
+      } else if (item === 'parede_madeira' && inventory.parede_madeira > 0) {
+        playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
         inventory.parede_madeira--; updateInventory();
-      } else if (buildMode === 'parede_pedra' && inventory.parede_pedra > 0) {
+        buildMode = null;
+      } else if (item === 'parede_pedra' && inventory.parede_pedra > 0) {
+        playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_pedra' });
         inventory.parede_pedra--; updateInventory();
-      } else if (buildMode === 'tocha' && inventory.tocha > 0) {
-        torches.push({ x: x-12, y: y-12, size: 24 }); inventory.tocha--; updateInventory();
-      } else if (buildMode === 'bomba' && inventory.bomba > 0) {
+        buildMode = null;
+      } else if (item === 'bomba' && inventory.bomba > 0) {
+        playSound('click');
         bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.bomba--; updateInventory();
-      } else if (buildMode === 'picareta') {
-        usePickaxeAt(x, y);
-      } else if (buildMode === 'superpicareta' && inventory.superpicareta) {
-        usePickaxeAt(x, y);
+        buildMode = null;
+      } else {
+        // Nada para construir ou item selecionado errado.
+        buildMode = null;
       }
+      updateCrafting();
     }
     
     function spawnEnemy() {
@@ -867,6 +951,7 @@
       for (let m of materials) {
         if (m.x < 0) continue;
         if (player.x < m.x + m.size && player.x + player.size > m.x && player.y < m.y + m.size && player.y + player.size > m.y) {
+          playSound('collect');
           if (m.type === 'madeira') inventory.madeira++;
           if (m.type === 'pedra') inventory.pedra++;
           if (m.type === 'madeira_floresta') inventory.madeira_floresta++;
@@ -876,11 +961,13 @@
       }
       for (let a of apples) {
         if (!a.collected && player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + player.size > a.y) {
+          playSound('collect');
           inventory.maca++; a.collected = true; updateInventory();
         }
       }
       for (let g of gems) {
         if (!g.collected && player.x < g.x + g.size && player.x + player.size > g.x && player.y < g.y + g.size && player.y + player.size > g.y) {
+          playSound('collect');
           inventory.gema++; g.collected = true; updateInventory();
         }
       }
@@ -888,6 +975,7 @@
         if (!e.alive) continue;
         if (player.x < e.x + e.size && player.x + player.size > e.x && player.y < e.y + e.size && player.y + player.size > e.y) {
           if (player.invencivel > 0) continue;
+          playSound('damage');
           if (e.tipo === 'explosivo' && !e.explodindo) {
             e.explodindo = true;
             setTimeout(()=>{
