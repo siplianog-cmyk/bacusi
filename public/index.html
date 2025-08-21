@@ -222,11 +222,6 @@
           <h1>Opções</h1>
           <p class="option-label">Volume do Jogo:</p>
           <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
-          <p class="option-label">Multiplayer:</p>
-          <label class="switch" style="font-size:1.5em; margin-top:16px;">
-            <input type="checkbox" id="multiplayer-toggle">
-            <span class="slider"></span>
-          </label>
           <p class="option-label">Fundo do Jogo:</p>
           <select id="background-select" style="font-size:1.2em; padding:8px; margin-top:8px;">
             <option value="dynamic">Dinâmico</option>
@@ -306,7 +301,6 @@
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
     const volumeSlider = document.getElementById('volume-slider');
-    const multiplayerToggle = document.getElementById('multiplayer-toggle');
     const hudSizeSlider = document.getElementById('hud-size-slider');
     const btnSizeSlider = document.getElementById('btn-size-slider');
     const joystickSizeSlider = document.getElementById('joystick-size-slider');
@@ -454,71 +448,6 @@
     ];
     let hotbarSelecionado = 0;
     
-    // Multiplayer
-    let ws = null;
-    let isMultiplayerEnabled = false;
-    let otherPlayers = {};
-
-    multiplayerToggle.addEventListener('change', () => {
-        isMultiplayerEnabled = multiplayerToggle.checked;
-    });
-    
-    function setupMultiplayer() {
-        if (!isMultiplayerEnabled) {
-            if (ws) { ws.close(); ws = null; otherPlayers = {}; }
-            return;
-        }
-
-        if (ws) return;
-
-        ws = new WebSocket('ws://localhost:3000');
-        
-        ws.onopen = () => {
-            console.log('Conectado ao servidor WebSocket');
-            player.id = Date.now().toString(); // ID único para o jogador
-        };
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'playerUpdate') {
-                otherPlayers = data.players;
-                delete otherPlayers[player.id];
-            } else if (data.type === 'playerDisconnected') {
-                delete otherPlayers[data.id];
-            }
-        };
-
-        ws.onclose = () => {
-            console.log('Desconectado do servidor WebSocket');
-            ws = null;
-            otherPlayers = {};
-        };
-
-        ws.onerror = (error) => {
-            console.error('Erro no WebSocket:', error);
-        };
-    }
-    
-    function sendPlayerUpdate() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const playerState = {
-                id: player.id,
-                x: player.x,
-                y: player.y,
-                color: player.color,
-                vida: player.vida,
-                armadura: player.armadura,
-                attackModifier: player.attackModifier,
-                defenseModifier: player.defenseModifier,
-                speedModifier: player.speedModifier,
-                effectTimer: player.effectTimer,
-                invencivel: player.invencivel
-            };
-            ws.send(JSON.stringify({ type: 'playerUpdate', player: playerState }));
-        }
-    }
-
-
     function renderHotbar() {
       const hotbarElement = document.getElementById('hotbar');
       if (!hotbarElement) return;
@@ -640,8 +569,6 @@
       requestAnimationFrame(gameLoop);
       if (currentMusic) { currentMusic.pause(); }
       playNextMusic();
-      
-      setupMultiplayer();
     }
 
     function setPause(val) {
@@ -775,8 +702,6 @@
     };
     btnResume.onclick = () => {
         playSound('click');
-        isMultiplayerEnabled = multiplayerToggle.checked;
-        setupMultiplayer();
         optionsMenu.style.display = 'none';
         hudPanel.style.display = 'block';
         setPause(false);
@@ -1425,10 +1350,6 @@
       if (player) {
           drawPlayerEntity(player);
       }
-      
-      for(const id in otherPlayers) {
-          drawPlayerEntity(otherPlayers[id]);
-      }
     
       for (let e of enemies) {
         if (!e.alive) continue;
@@ -1582,10 +1503,6 @@
         updateCamera();
         moveEnemies();
         checkCollision();
-        
-        if (isMultiplayerEnabled && ws && ws.readyState === WebSocket.OPEN) {
-            sendPlayerUpdate();
-        }
         
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
