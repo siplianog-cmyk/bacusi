@@ -1192,10 +1192,19 @@
     function updateCamera() {
       const targetX = player.x + player.size / 2;
       const targetY = player.y + player.size / 2;
-      camera.x = targetX - (W() / (2 / CAMERA_ZOOM));
-      camera.y = targetY - (H() / (2 / CAMERA_ZOOM));
-      camera.x = Math.max(0, Math.min(MAPA_LARGURA - W() / CAMERA_ZOOM, camera.x));
-      camera.y = Math.max(0, Math.min(MAPA_ALTURA - H() / CAMERA_ZOOM, camera.y));
+      
+      // *** MUDANÇA PRINCIPAL AQUI: CORRIGINDO O CÁLCULO PARA O ZOOM ***
+      // A câmera deve centralizar o jogador na metade do tamanho visível do mundo.
+      // O tamanho visível é o tamanho da tela dividido pelo zoom.
+      const visibleWidth = W() / CAMERA_ZOOM;
+      const visibleHeight = H() / CAMERA_ZOOM;
+      
+      camera.x = targetX - visibleWidth / 2;
+      camera.y = targetY - visibleHeight / 2;
+      
+      // Limitar a câmera para que ela não saia dos limites do mapa
+      camera.x = Math.max(0, Math.min(MAPA_LARGURA - visibleWidth, camera.x));
+      camera.y = Math.max(0, Math.min(MAPA_ALTURA - visibleHeight, camera.y));
     }
     
     function moveEnemies() {
