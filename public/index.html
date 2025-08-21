@@ -335,6 +335,7 @@
       damage: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/damage.mp3',
       explosion: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/explosion.mp3',
       step: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/step.mp3',
+      potion: 'https://cdn.jsdelivr.net/gh/jake-f/assets/sfx/potion.mp3',
     };
 
     const musicUrls = [
@@ -429,6 +430,7 @@
       { id: 'armadura', nome: 'Armadura', emoji: '🦺' },
       { id: 'bomba', nome: 'Bomba', emoji: '💣' },
       { id: 'tinteiro_magico', nome: 'Tinteiro Mágico', emoji: '🖌️' },
+      { id: 'pocao', nome: 'Poção Força', emoji: '🧪' },
       { id: 'madeira', nome: 'Madeira', emoji: '🌲' },
       { id: 'pedra', nome: 'Pedra', emoji: '🪨' }
     ];
@@ -451,13 +453,17 @@
     }
 
     function connectSocket() {
-      if (!isMultiplayerEnabled) return;
+      if (!isMultiplayerEnabled) {
+          if (socket) disconnectSocket();
+          return;
+      }
       if (socket && socket.connected) return;
 
       try {
         socket = io(SOCKET_SERVER_URL, { 
             transports: ['websocket'], 
-            reconnectionAttempts: 5
+            reconnectionAttempts: 5,
+            timeout: 5000,
         });
 
         socket.on('connect', () => { 
@@ -510,6 +516,7 @@
                       existingPlayer.espada = payload[id].espada;
                       existingPlayer.picareta = payload[id].picareta;
                       existingPlayer.color = payload[id].color;
+                      existingPlayer.effectTimer = payload[id].effectTimer;
                   } else {
                       otherPlayers[id] = payload[id];
                   }
@@ -541,7 +548,8 @@
                 armadura: player.armadura,
                 espada: inventory.espada,
                 picareta: inventory.picareta,
-                color: player.color
+                color: player.color,
+                effectTimer: player.effectTimer
             });
         }
     }
@@ -560,7 +568,8 @@
             armadura: inventory.armadura,
             espada: inventory.espada,
             picareta: inventory.picareta,
-            color: player.color
+            color: player.color,
+            effectTimer: player.effectTimer
           });
           lastSentState = now;
         }
@@ -621,12 +630,17 @@
         y: MAPA_ALTURA / 2, 
         size: 40, 
         speed: 4, 
+        baseSpeed: 4,
         blink: 0, 
         vida: 5, 
         armadura: false, 
         invencivel: 0, 
         id: selfId,
-        color: colorPicker.value
+        color: colorPicker.value,
+        attackModifier: 1,
+        defenseModifier: 1,
+        speedModifier: 1,
+        effectTimer: 0
       };
       enemies = [];
       materials = [];
@@ -713,15 +727,17 @@
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
       playSound('click');
-      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % 11;
-      else hotbarSelecionado = (hotbarSelecionado + 10) % 11;
+      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % hotbarItens.length;
+      else hotbarSelecionado = (hotbarSelecionado + hotbarItens.length - 1) % hotbarItens.length;
       renderHotbar();
     }, {passive:false});
 
     canvas.addEventListener('mousemove', e=>{
       const rect = canvas.getBoundingClientRect();
-      mouseWorld.x = e.clientX / CAMERA_ZOOM - rect.left/CAMERA_ZOOM + camera.x/CAMERA_ZOOM;
-      mouseWorld.y = e.clientY / CAMERA_ZOOM - rect.top/CAMERA_ZOOM + camera.y/CAMERA_ZOOM;
+      const scaleX = W() / rect.width;
+      const scaleY = H() / rect.height;
+      mouseWorld.x = (e.clientX - rect.left) * scaleX / CAMERA_ZOOM + camera.x;
+      mouseWorld.y = (e.clientY - rect.top) * scaleY / CAMERA_ZOOM + camera.y;
     });
 
     canvas.addEventListener('mousedown', e => {
@@ -867,7 +883,7 @@
 
     function updateInventory() {
         const invDiv = document.getElementById('inv');
-        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba} | 💎: ${inventory.gema}</span>`;
+        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba} | 💎: ${inventory.gema} | 🧪: ${inventory.pocao}</span>`;
         invDiv.innerHTML = txt;
         renderHotbar();
     }
@@ -928,6 +944,9 @@
       if (item === 'tinteiro_magico' && inventory.gema >= 10) {
         inventory.gema -= 10; inventory.tinteiro_magico++; updateInventory();
       }
+      if (item === 'pocao' && inventory.gema >= 3 && inventory.pedra >= 5) {
+          inventory.gema -= 3; inventory.pedra -= 5; inventory.pocao++; updateInventory();
+      }
     }
 
     function usarHotbarAtMouse() {
@@ -938,10 +957,12 @@
         usarMaca();
       } else if (item === 'tinteiro_magico') {
         usarTinteiroMagico();
+      } else if (item === 'pocao') {
+        usarPocao();
       } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
         buildMode = item;
         updateCrafting();
-      } else if (item === 'picareta') {
+      } else if (item === 'picareta' || item === 'superpicareta') {
         usePickaxeAt(mouseWorld.x, mouseWorld.y);
       }
     }
@@ -965,16 +986,30 @@
             }
         }
     }
+
+    function usarPocao() {
+        if (inventory.pocao > 0) {
+            playSound('potion');
+            player.speedModifier = 2;
+            player.defenseModifier = 0.5;
+            player.attackModifier = 2;
+            player.effectTimer = 30; // 30 segundos
+            inventory.pocao--;
+            updateInventory();
+            announceSelf();
+        }
+    }
     
     function attackEnemy() {
       if (!inventory.espada) return;
       playSound('attack');
+      const attackPower = inventory.espada ? 1 : 0;
       for (let e of enemies) {
         if (!e.alive) continue;
         const dx = player.x + player.size/2 - (e.x + e.size/2);
         const dy = player.y + player.size/2 - (e.y + e.size/2);
         const dist = Math.hypot(dx, dy);
-        if (dist < 54) { e.vida--; if (e.vida <= 0) e.alive = false; return; }
+        if (dist < 54) { e.vida -= attackPower * player.attackModifier; if (e.vida <= 0) e.alive = false; return; }
       }
     }
     
@@ -1061,7 +1096,7 @@
       if (florestaDesbloqueada) {
         for (let i = 0; i < 20; i++) {
           materials.push({
-            x: W() + 80 + Math.random() * (MAPA_LARGURA - W() - 160),
+            x: MAPA_LARGURA * 0.45 + Math.random() * (MAPA_LARGURA - MAPA_LARGURA * 0.45 - 160),
             y: 60 + Math.random() * (MAPA_ALTURA - 120),
             size: 36,
             type: Math.random() < 0.85 ? 'madeira_floresta' : 'madeira'
@@ -1069,13 +1104,16 @@
         }
       }
       apples = Math.random() < 0.6 ? [{ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 24, collected: false }] : [];
-      gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false, type: 'gema' }] : [];
+      gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (MAPA_ALTURA-160), size: 26, collected: false, type: 'gema' }] : [];
+      if (montanhaLiberada) {
+          materials.push({ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (MAPA_ALTURA-160), size: 26, type: 'gema' });
+      }
     }
     
     function movePlayer() {
-      let vel = player.speed;
+      let vel = player.baseSpeed * player.speedModifier;
       let moved = false;
-      if (florestaDesbloqueada && player.x > MAPA_LARGURA * 0.4) vel = player.speed * 0.55;
+      if (florestaDesbloqueada && player.x > MAPA_LARGURA * 0.4) vel = player.baseSpeed * 0.55 * player.speedModifier;
       if (keyboard['arrowup'] || keyboard['w']) { player.y -= vel; moved = true; }
       if (keyboard['arrowdown'] || keyboard['s']) { player.y += vel; moved = true; }
       if (keyboard['arrowleft'] || keyboard['a']) { player.x -= vel; moved = true; }
@@ -1090,8 +1128,12 @@
     }
     
     function updateCamera() {
-      camera.x = (player.x + player.size/2) - (W() / 2) / CAMERA_ZOOM;
-      camera.y = (player.y + player.size/2) - (H() / 2) / CAMERA_ZOOM;
+      const targetX = player.x + player.size/2;
+      const targetY = player.y + player.size/2;
+      camera.x = targetX - (W() / 2) / CAMERA_ZOOM;
+      camera.y = targetY - (H() / 2) / CAMERA_ZOOM;
+      camera.x = Math.max(0, Math.min(MAPA_LARGURA - W()/CAMERA_ZOOM, camera.x));
+      camera.y = Math.max(0, Math.min(MAPA_ALTURA - H()/CAMERA_ZOOM, camera.y));
     }
     
     function moveEnemies() {
@@ -1149,14 +1191,15 @@
             setTimeout(()=>{
               if (!running) return;
               playSound('explosion');
-              player.vida -= e.dano;
+              player.vida -= e.dano*player.defenseModifier;
               updateVida();
               e.alive = false;
               if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
             }, 300);
           } else {
-            if (inventory.armadura) player.vida -= e.dano*0.5;
-            else player.vida -= e.dano;
+            let damage = e.dano * player.defenseModifier;
+            if (inventory.armadura) damage *= 0.5;
+            player.vida -= damage;
             player.invencivel = 40;
             updateVida();
             if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
@@ -1194,6 +1237,18 @@
       if (!ctx) return;
       
       ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+      
+      ctx.save();
+      ctx.fillStyle = '#6a6a6a';
+      ctx.fillRect(MAPA_LARGURA - 200, 0, 200, MAPA_ALTURA);
+      ctx.fillStyle = '#444';
+      ctx.fillRect(MAPA_LARGURA - 200, 0, 20, MAPA_ALTURA);
+      ctx.restore();
+      
+      ctx.save();
+      ctx.fillStyle = '#006400';
+      ctx.fillRect(MAPA_LARGURA * 0.45, 0, MAPA_LARGURA * 0.55, MAPA_ALTURA);
+      ctx.restore();
 
       if (montanhaLiberada) {
         ctx.save();
@@ -1501,6 +1556,15 @@
         }
         if (!montanhaLiberada && dias >= 1000) montanhaLiberada = true;
         isDay = Math.floor(elapsed / dayLength) % 2 === 0;
+
+        if (player.effectTimer > 0) {
+            player.effectTimer -= 1/60;
+            if (player.effectTimer <= 0) {
+                player.speedModifier = 1;
+                player.defenseModifier = 1;
+                player.attackModifier = 1;
+            }
+        }
         
         let moved = movePlayer();
         updateCamera();
@@ -1532,7 +1596,7 @@
               if (Math.hypot(bld.x+bld.size/2-ex, bld.y+bld.size/2-ey) <= r) buildings.splice(j,1);
             }
             if (Math.hypot(player.x+player.size/2-ex, player.y+player.size/2-ey) <= r) {
-              player.vida -= 2; updateVida();
+              player.vida -= 2 * player.defenseModifier; updateVida();
               if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
             }
             bombs.splice(i,1);
