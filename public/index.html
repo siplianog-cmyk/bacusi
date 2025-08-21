@@ -212,6 +212,8 @@
 <body>
   <div id="start-menu" class="overlay-menu">
       <h1>Jogo de Sobrevivência</h1>
+      <p>Escolha sua cor:</p>
+      <input type="color" id="color-picker" value="#00e6ff">
       <button id="btn-start">Começar</button>
   </div>
   
@@ -309,6 +311,7 @@
     const joystickYSlider = document.getElementById('joystick-y-slider');
     const btnXSlider = document.getElementById('btn-x-slider');
     const btnYSlider = document.getElementById('btn-y-slider');
+    const colorPicker = document.getElementById('color-picker');
 
     if (!isMobile) {
         joystickArea.style.display = 'none';
@@ -322,6 +325,7 @@
     
     const canvas = document.getElementById('game');
     let ctx = null;
+    const CAMERA_ZOOM = isMobile ? 0.7 : 1;
 
     // SONS e MÚSICAS
     const soundUrls = {
@@ -424,6 +428,7 @@
       { id: 'parede_pedra', nome: 'Parede Pedra', emoji: '⬜' },
       { id: 'armadura', nome: 'Armadura', emoji: '🦺' },
       { id: 'bomba', nome: 'Bomba', emoji: '💣' },
+      { id: 'tinteiro_magico', nome: 'Tinteiro Mágico', emoji: '🖌️' },
       { id: 'madeira', nome: 'Madeira', emoji: '🌲' },
       { id: 'pedra', nome: 'Pedra', emoji: '🪨' }
     ];
@@ -458,7 +463,7 @@
         socket.on('connect', () => { 
             selfId = socket.id;
             player.id = selfId;
-            player.color = getRandomColor();
+            player.color = colorPicker.value;
             console.log('Conectado ao servidor com ID:', selfId);
             announceSelf();
         });
@@ -504,6 +509,7 @@
                       existingPlayer.armadura = payload[id].armadura;
                       existingPlayer.espada = payload[id].espada;
                       existingPlayer.picareta = payload[id].picareta;
+                      existingPlayer.color = payload[id].color;
                   } else {
                       otherPlayers[id] = payload[id];
                   }
@@ -620,7 +626,7 @@
         armadura: false, 
         invencivel: 0, 
         id: selfId,
-        color: 'deepskyblue' 
+        color: colorPicker.value
       };
       enemies = [];
       materials = [];
@@ -648,7 +654,8 @@
         bomba: 0,
         sementes: 0,
         pocao: 0,
-        superpicareta: false
+        superpicareta: false,
+        tinteiro_magico: 0
       };
       
       dayTransitionActive = false;
@@ -706,8 +713,8 @@
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
       playSound('click');
-      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % 10;
-      else hotbarSelecionado = (hotbarSelecionado + 9) % 10;
+      if (e.deltaY > 0) hotbarSelecionado = (hotbarSelecionado + 1) % 11;
+      else hotbarSelecionado = (hotbarSelecionado + 10) % 11;
       renderHotbar();
     }, {passive:false});
 
@@ -860,7 +867,7 @@
 
     function updateInventory() {
         const invDiv = document.getElementById('inv');
-        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba}</span>`;
+        let txt = `<span style="font-size: 14px;">🌲: ${inventory.madeira} | 🪨: ${inventory.pedra} | 🍎: ${inventory.maca} | 💣: ${inventory.bomba} | 💎: ${inventory.gema}</span>`;
         invDiv.innerHTML = txt;
         renderHotbar();
     }
@@ -911,12 +918,15 @@
         inventory.pedra -= 4; if (inventory.madeira >= 2) inventory.madeira -= 2; else inventory.madeira_floresta -= 2;
         inventory.armadura = true; player.armadura = true; updateInventory(); updateVida();
       }
-      if (item === 'gema' && inventory.gema >= 5) {
+      if (item === 'superpicareta' && !inventory.superpicareta && inventory.gema >= 5) {
         inventory.gema -= 5; inventory.superpicareta = true; updateInventory();
         alert("Você criou a Super Picareta! Selecione e use no mapa para destruir instantaneamente.");
       }
       if (item === 'bomba' && inventory.pedra >= 2 && inventory.madeira >= 2) {
         inventory.pedra -= 2; inventory.madeira -= 2; inventory.bomba++; updateInventory();
+      }
+      if (item === 'tinteiro_magico' && inventory.gema >= 10) {
+        inventory.gema -= 10; inventory.tinteiro_magico++; updateInventory();
       }
     }
 
@@ -926,6 +936,8 @@
         attackEnemy();
       } else if (item === 'maca') {
         usarMaca();
+      } else if (item === 'tinteiro_magico') {
+        usarTinteiroMagico();
       } else if (item === 'tocha' || item === 'parede_madeira' || item === 'parede_pedra' || item === 'bomba') {
         buildMode = item;
         updateCrafting();
@@ -939,6 +951,19 @@
         playSound('collect');
         inventory.maca--; player.vida = Math.min(5, player.vida + 2); updateInventory(); updateVida();
       }
+    }
+
+    function usarTinteiroMagico() {
+        if (inventory.tinteiro_magico > 0) {
+            playSound('collect');
+            const newColor = prompt("Digite um código de cor (ex: #ff0000, blue):", player.color);
+            if (newColor) {
+                player.color = newColor;
+                inventory.tinteiro_magico--;
+                updateInventory();
+                announceSelf();
+            }
+        }
     }
     
     function attackEnemy() {
@@ -965,6 +990,7 @@
           if (m.type === 'madeira') inventory.madeira++;
           else if (m.type === 'pedra') inventory.pedra++;
           else if (m.type === 'madeira_floresta') inventory.madeira_floresta++;
+          else if (m.type === 'gema') inventory.gema++;
           m.x = -100;
         }
       }
@@ -1043,7 +1069,7 @@
         }
       }
       apples = Math.random() < 0.6 ? [{ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 24, collected: false }] : [];
-      gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false }] : [];
+      gems = (montanhaLiberada && Math.random() < 0.6) ? [{ x: MAPA_LARGURA - 200 + Math.random() * 160, y: 80 + Math.random() * (H()-160), size: 26, collected: false, type: 'gema' }] : [];
     }
     
     function movePlayer() {
@@ -1064,8 +1090,8 @@
     }
     
     function updateCamera() {
-      camera.x = player.x - W()/2 + player.size/2;
-      camera.y = player.y - H()/2 + player.size/2;
+      camera.x = player.x - W() / 2 / CAMERA_ZOOM + player.size / 2;
+      camera.y = player.y - H() / 2 / CAMERA_ZOOM + player.size / 2;
     }
     
     function moveEnemies() {
@@ -1094,18 +1120,21 @@
           if (m.type === 'madeira') inventory.madeira++;
           if (m.type === 'pedra') inventory.pedra++;
           if (m.type === 'madeira_floresta') inventory.madeira_floresta++;
+          if (m.type === 'gema') inventory.gema++;
           m.x = -100;
           updateInventory();
         }
       }
       for (let a of apples) {
-        if (!a.collected && player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + a.size > a.y) {
+        if (a.collected) continue;
+        if (player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + a.size > a.y) {
           playSound('collect');
           inventory.maca++; a.collected = true; updateInventory();
         }
       }
       for (let g of gems) {
-        if (!g.collected && player.x < g.x + g.size && player.x + player.size > g.x && player.y < g.y + g.size && player.y + g.size > g.y) {
+        if (g.collected) continue;
+        if (player.x < g.x + g.size && player.x + player.size > g.x && player.y < g.y + g.size && player.y + g.size > g.y) {
           playSound('collect');
           inventory.gema++; g.collected = true; updateInventory();
         }
@@ -1163,6 +1192,9 @@
     
     function drawWorld(now) {
       if (!ctx) return;
+      
+      ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+
       if (montanhaLiberada) {
         ctx.save();
         ctx.globalAlpha = 0.9;
@@ -1210,11 +1242,11 @@
           ctx.arc(m.x+m.size/2+8, m.y+m.size/2-10, 7, 0, 2*Math.PI);
           ctx.fill();
           ctx.restore();
-        } else {
+        } else if (m.type === 'pedra') {
           ctx.save();
           ctx.shadowColor = "#fff";
           ctx.shadowBlur = 8;
-          ctx.fillStyle = "#bcd";
+          ctx.fillStyle = "#bbb";
           ctx.beginPath();
           ctx.ellipse(m.x+m.size/2, m.y+m.size/2, m.size/2, m.size/2.5, 0.3, 0, 2*Math.PI);
           ctx.fill();
@@ -1222,6 +1254,19 @@
           ctx.fillStyle = "#fff8";
           ctx.beginPath();
           ctx.arc(m.x+m.size/2+5, m.y+m.size/2-5, 5, 0, 2*Math.PI);
+          ctx.fill();
+          ctx.restore();
+        } else if (m.type === 'gema') {
+          ctx.save();
+          ctx.shadowColor = "#00e";
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = "#00e6ff";
+          ctx.beginPath();
+          ctx.moveTo(m.x+m.size/2, m.y);
+          ctx.lineTo(m.x+m.size, m.y+m.size/2);
+          ctx.lineTo(m.x+m.size/2, m.y+m.size);
+          ctx.lineTo(m.x, m.y+m.size/2);
+          ctx.closePath();
           ctx.fill();
           ctx.restore();
         }
@@ -1363,6 +1408,7 @@
         ctx.stroke();
         ctx.restore();
       }
+      ctx.restore();
     }
     
     function drawPlayerEntity(ent, isSelf) {
