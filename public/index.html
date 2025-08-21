@@ -276,45 +276,48 @@ document.addEventListener('keyup', (e) => {
       // Eventos do Socket.IO para o cliente
       socket.on('connect', () => { 
           selfId = socket.id;
+          player.id = selfId;
           console.log('Conectado ao servidor com ID:', selfId);
           announceSelf(); 
       });
-// Função para anunciar a chegada do player para o servidor
-function announceSelf() {
-    if (socket && socket.connected) {
-        // Envia a posição inicial do player e a vida atual
-        socket.emit('playerState', {
-            id: player.id,
-            x: player.x,
-            y: player.y,
-            vida: player.vida
-        });
-    }
-}
 
-// throttling
-let lastSentState = 0;
-const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
+      // Função para anunciar a chegada do player para o servidor
+      function announceSelf() {
+          if (socket && socket.connected) {
+              // Envia a posição inicial do player e a vida atual
+              socket.emit('playerState', {
+                  id: player.id,
+                  x: player.x,
+                  y: player.y,
+                  vida: player.vida,
+                  armadura: player.armadura,
+                  espada: inventory.espada,
+                  picareta: inventory.picareta
+              });
+          }
+      }
 
-// Função para enviar o estado do jogador ao servidor de forma otimizada
-function throttleSendState() {
-  if (socket && socket.connected) {
-    // A função movePlayer() já define a variável `moved` para true, mas a declaração precisa estar fora.
-    const moved = movePlayer();
+      // throttling
+      let lastSentState = 0;
+      const STATE_SEND_INTERVAL = 1000 / 20; // 20 vezes por segundo
 
-    if (moved) {
-      socket.emit('playerState', {
-        x: player.x,
-        y: player.y,
-        vida: player.vida,
-        armadura: inventory.armadura,
-        espada: inventory.espada,
-        picareta: inventory.picareta,
-      });
-    }
-  }
-}
-
+      // Função para enviar o estado do jogador ao servidor de forma otimizada
+      function throttleSendState() {
+        if (socket && socket.connected) {
+          const now = performance.now();
+          if (now - lastSentState > STATE_SEND_INTERVAL) {
+            socket.emit('playerState', {
+              x: player.x,
+              y: player.y,
+              vida: player.vida,
+              armadura: inventory.armadura,
+              espada: inventory.espada,
+              picareta: inventory.picareta,
+            });
+            lastSentState = now;
+          }
+        }
+      }
 
       socket.on('currentPlayers', (players) => {
         for (let id in players) {
@@ -332,7 +335,7 @@ function throttleSendState() {
         delete otherPlayers[playerId];
       });
       
-socket.on('state', payload => {
+      socket.on('state', payload => {
         if (!payload) return;
         
         // Limpa a lista para garantir que jogadores que saíram sejam removidos
@@ -356,30 +359,6 @@ socket.on('state', payload => {
     } catch (e) {
       console.warn('Socket.IO não disponível. Multiplayer desativado.', e);
     }
-
-
-  // Mapeia os botões móveis para as teclas do jogo
-  document.getElementById('btn-up').addEventListener('touchstart', () => { keys.w = true; });
-  document.getElementById('up-btn').addEventListener('touchend', () => { keys.w = false; });
-
-  document.getElementById('down-btn').addEventListener('touchstart', () => { keys.s = true; });
-  document.getElementById('down-btn').addEventListener('touchend', () => { keys.s = false; });
-
-  document.getElementById('left-btn').addEventListener('touchstart', () => { keys.a = true; });
-  document.getElementById('left-btn').addEventListener('touchend', () => { keys.a = false; });
-
-  document.getElementById('right-btn').addEventListener('touchstart', () => { keys.d = true; });
-  document.getElementById('right-btn').addEventListener('touchend', () => { keys.d = false; });
-
-  document.getElementById('action-btn').addEventListener('touchstart', () => {
-    // Simula a tecla 'E' para ações
-    keys.e = true;
-    player.isAttacking = true;
-  });
-  document.getElementById('action-btn').addEventListener('touchend', () => {
-    keys.e = false;
-    player.isAttacking = false;
-  });
 
 
     function renderHotbar() {
@@ -450,10 +429,18 @@ socket.on('state', payload => {
         });
     }
 
-
-
     function resetGame() {
-      player = { x: W()/2, y: H()/2, size: 40, speed: 4, blink: 0, vida: 5, armadura: false, invencivel: 0, id: selfId };
+      player = { 
+        x: MAPA_LARGURA / 2, 
+        y: MAPA_ALTURA / 2, 
+        size: 40, 
+        speed: 4, 
+        blink: 0, 
+        vida: 5, 
+        armadura: false, 
+        invencivel: 0, 
+        id: selfId 
+      };
       keys = {};
       enemies = [];
       materials = [];
@@ -483,17 +470,6 @@ socket.on('state', payload => {
         pocao: 0,
         superpicareta: false
       };
-        player = { 
-        x: MAPA_LARGURA / 2, // Começa o jogador no centro do mapa
-        y: MAPA_ALTURA / 2, 
-        size: 40, 
-        speed: 4, 
-        blink: 0, 
-        vida: 5, 
-        armadura: false, 
-        invencivel: 0, 
-        id: selfId 
-  };
       camera.x = player.x - W() / 2; 
       camera.y = player.y - H() / 2; 
       dayTransitionActive = false;
@@ -522,8 +498,7 @@ socket.on('state', payload => {
 
       restartBtn.style.display = 'none';
 
-
-      announceSelf(); // multiplayer
+      announceSelf();
       requestAnimationFrame(gameLoop);
     }
 
@@ -637,9 +612,6 @@ socket.on('state', payload => {
       if (e.key === 'Enter') usarHotbar();
     }, {capture:true});
     document.addEventListener('keyup', e => keys[e.key] = false);
-
-
-
 
     hotbarDiv.addEventListener('wheel', e => {
       e.preventDefault();
@@ -871,6 +843,7 @@ function movePlayer() {
   if ((keys['ArrowLeft'] || keys['a']) && player.x > 0) { player.x -= vel; moved = true; }
   if ((keys['ArrowRight'] || keys['d']) && player.x < MAPA_LARGURA - player.size) { player.x += vel; moved = true; }
   if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
+  return moved;
 }
 
     function updateCamera() {
@@ -1354,10 +1327,10 @@ function bindTouch(buttonId, keyName) {
 }
 
 // Vincula os botões do D-pad às teclas correspondentes
-bindTouch('btn-up', 'ArrowUp');
-bindTouch('btn-down', 'ArrowDown');
-bindTouch('btn-left', 'ArrowLeft');
-bindTouch('btn-right', 'ArrowRight');
+bindTouch('btn-up', 'w');
+bindTouch('btn-down', 's');
+bindTouch('btn-left', 'a');
+bindTouch('btn-right', 'd');
 
 // Eventos para os botões de ação
 document.getElementById('btn-attack')?.addEventListener('touchstart', e => { e.preventDefault(); attackEnemy(); }, { passive: false });
@@ -1387,7 +1360,6 @@ canvas.addEventListener('touchmove', e=> {
     function gameLoop(now) {
       if (!startTime) startTime = now;
       if (running && !paused) {
-        let moved = false; 
         elapsed = (now - startTime) / 1000;
         timerSpan.textContent = elapsed.toFixed(1);
         dias = Math.floor(elapsed / (dayLength*2)) + 1;
@@ -1399,9 +1371,16 @@ canvas.addEventListener('touchmove', e=> {
         }
         if (!montanhaLiberada && dias >= 1000) montanhaLiberada = true;
         isDay = Math.floor(elapsed / dayLength) % 2 === 0;
+        
+        let moved = movePlayer(); // Corrigido para retornar se o jogador moveu
         updateCamera();
         moveEnemies();
         checkCollision();
+        
+        // Chamamos a função de envio de estado aqui
+        if (moved) {
+          throttleSendState();
+        }
 
         for (let i = bombs.length-1; i >= 0; i--) {
           const b = bombs[i];
@@ -1442,27 +1421,8 @@ canvas.addEventListener('touchmove', e=> {
         if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
         if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
 
-  if (keyboard.ArrowUp || keyboard.w || keyboard.k) {
-    player.y -= player.speed;
-    moved = true;
-  }
 
-// Se o jogador se moveu, enviamos a nova posição para o servidor
-if (moved && socket && socket.connected) {
-  socket.emit('playerState', {
-    x: player.x,
-    y: player.y,
-    vida: player.vida,
-    armadura: inventory.armadura,
-    espada: inventory.espada,
-    picareta: inventory.picareta,
-    // Adicione outras propriedades importantes aqui
-  });
-}
-
-throttleSendState(); 
-
-requestAnimationFrame(gameLoop);
+        requestAnimationFrame(gameLoop);
       } else if (!running) {
         timerSpan.textContent = elapsed.toFixed(1);
         ctx.save();
@@ -1494,6 +1454,7 @@ if (isMobileDevice) {
   document.body.classList.add('mobile');
 }
 
+    // Corrigido a lógica de bindTouch para usar `keys` em vez de `keyboard`
     function bindTouch(btnId, key) {
       const btn = document.getElementById(btnId);
       if (!btn) return;
@@ -1503,10 +1464,11 @@ if (isMobileDevice) {
       btn.addEventListener('touchend', off, {passive:false});
       btn.addEventListener('touchcancel', off, {passive:false});
     }
-    bindTouch('btn-up','ArrowUp');
-    bindTouch('btn-down','ArrowDown');
-    bindTouch('btn-left','ArrowLeft');
-    bindTouch('btn-right','ArrowRight');
+    // Corrigido os IDs dos botões
+    bindTouch('btn-up','w');
+    bindTouch('btn-down','s');
+    bindTouch('btn-left','a');
+    bindTouch('btn-right','d');
 
     document.getElementById('btn-attack')?.addEventListener('touchstart', e => { e.preventDefault(); attackEnemy(); }, {passive:false});
     document.getElementById('btn-use')?.addEventListener('touchstart', e => { e.preventDefault(); usarHotbar(); }, {passive:false});
