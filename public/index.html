@@ -697,6 +697,7 @@
         playSound('click');
         startMenu.style.display = 'none';
         gameContainer.style.display = 'block';
+        initCanvas(); // Adicionei esta linha
         resetGame();
     };
     optionsBtn.onclick = () => {
@@ -1189,7 +1190,24 @@
     }
     
     function gameLoop(now) {
-      if (!running) return;
+      if (!running) {
+        timerSpan.textContent = elapsed.toFixed(1);
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = '#222b';
+        ctx.fillRect(W()/2-180, H()/2-80, 360, 160);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'white';
+        ctx.font = '38px Arial';
+        ctx.textAlign = "center";
+        ctx.fillText('Game Over!', W()/2, H()/2-10);
+        ctx.font = '24px Arial';
+        ctx.fillText('Tempo: ' + elapsed.toFixed(1) + ' s', W()/2, H()/2+30);
+        ctx.restore();
+        if (currentMusic) { currentMusic.pause(); }
+        return;
+      }
+      
       if (paused) {
         requestAnimationFrame(gameLoop);
         return;
@@ -1225,7 +1243,7 @@
       
       if (speedX !== 0 || speedY !== 0) {
         player.angle = Math.atan2(speedY, speedX);
-        socket.emit('playerMovement', { x: player.x, y: player.y, angle: player.angle });
+        socket.emit('playerState', { x: player.x, y: player.y, angle: player.angle });
       }
 
       // Atualizar câmera
@@ -1378,12 +1396,20 @@
         delete otherPlayers[playerId];
     });
 
-    socket.on('playerState', (playerData) => {
-        if (otherPlayers[playerData.id]) {
-            otherPlayers[playerData.id] = playerData;
+    socket.on('allPlayersState', (playersData) => {
+        for (let id in playersData) {
+            if (id === socket.id) {
+                if (player.id) {
+                    player = { ...player, ...playersData[id] };
+                }
+            } else {
+                otherPlayers[id] = playersData[id];
+            }
         }
     });
-
+    
+    // Inicia o canvas e o loop do jogo quando a página carrega
+    window.onload = initCanvas;
   </script>
 </body>
 </html>
