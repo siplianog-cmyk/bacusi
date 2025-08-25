@@ -284,6 +284,7 @@
     <button id="restart" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;">Recomeçar</button>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
     const startMenu = document.getElementById('start-menu');
@@ -496,6 +497,10 @@
     let joystickTimeout = null;
     let joystickTouchId = null;
     let arrows = [];
+
+    // Variáveis do Multiplayer
+    const socket = io();
+    const otherPlayers = {};
 
     function resetGame() {
       player = { 
@@ -858,17 +863,17 @@
     }
 
     function usarPocao() {
-        if (inventory.pocao > 0) {
-            playSound('potion');
-            player.speedModifier = 2;
-            player.defenseModifier = 0.5;
-            player.attackModifier = 2;
-            player.effectTimer = 30; // 30 segundos
-            inventory.pocao--;
-            updateInventory();
-        }
+      if (inventory.pocao > 0) {
+        playSound('potion');
+        player.speedModifier = 2;
+        player.defenseModifier = 0.5;
+        player.attackModifier = 2;
+        player.effectTimer = 30; // 30 segundos
+        inventory.pocao--;
+        updateInventory();
+      }
     }
-    
+
     function attackEnemy() {
       if (!inventory.espada) return;
       playSound('attack');
@@ -878,7 +883,11 @@
         const dx = player.x + player.size/2 - (e.x + e.size/2);
         const dy = player.y + player.size/2 - (e.y + e.size/2);
         const dist = Math.hypot(dx, dy);
-        if (dist < 54) { e.vida -= attackPower * player.attackModifier; if (e.vida <= 0) e.alive = false; return; }
+        if (dist < 54) {
+          e.vida -= attackPower * player.attackModifier;
+          if (e.vida <= 0) e.alive = false;
+          return;
+        }
       }
     }
 
@@ -890,15 +899,10 @@
       const dy = mouseWorld.y - player.y;
       const angle = Math.atan2(dy, dx);
       const speed = 15;
-      arrows.push({
-          x: player.x,
-          y: player.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed
-      });
+      arrows.push({ x: player.x, y: player.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed });
       updateInventory();
     }
-    
+
     function usePickaxeAt(x, y) {
       if (!inventory.picareta && !inventory.superpicareta) return;
       playSound('attack');
@@ -930,42 +934,37 @@
     
     function buildAt(x, y) {
       if (!buildMode) return;
-      
       let item = hotbarItens[hotbarSelecionado].id;
       if (item === 'tocha' && inventory.tocha > 0) {
         playSound('click');
-        torches.push({ x: x-12, y: y-12, size: 24 }); inventory.tocha--; updateInventory();
-        buildMode = null;
+        torches.push({ x: x-12, y: y-12, size: 24 });
+        inventory.tocha--; updateInventory(); buildMode = null;
       } else if (item === 'parede_madeira' && inventory.parede_madeira > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_madeira' });
-        inventory.parede_madeira--; updateInventory();
-        buildMode = null;
+        inventory.parede_madeira--; updateInventory(); buildMode = null;
       } else if (item === 'parede_pedra' && inventory.parede_pedra > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'parede_pedra' });
-        inventory.parede_pedra--; updateInventory();
-        buildMode = null;
+        inventory.parede_pedra--; updateInventory(); buildMode = null;
       } else if (item === 'armadilha' && inventory.armadilha > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'armadilha' });
-        inventory.armadilha--; updateInventory();
-        buildMode = null;
+        inventory.armadilha--; updateInventory(); buildMode = null;
       } else if (item === 'mina' && inventory.mina > 0) {
         playSound('click');
-        bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 }); inventory.mina--; updateInventory();
-        buildMode = null;
+        bombs.push({ x: x-12, y: y-12, size: 24, timer: 900 });
+        inventory.mina--; updateInventory(); buildMode = null;
       } else if (item === 'fogueira' && inventory.fogueira > 0) {
         playSound('click');
         buildings.push({ x: x-20, y: y-20, size: 40, type: 'fogueira' });
-        inventory.fogueira--; updateInventory();
-        buildMode = null;
+        inventory.fogueira--; updateInventory(); buildMode = null;
       } else {
         buildMode = null;
       }
       updateCrafting();
     }
-    
+
     function spawnEnemy() {
       const edge = Math.floor(Math.random() * 4);
       let x, y;
@@ -973,632 +972,418 @@
       else if (edge === 1) { x = MAPA_LARGURA; y = Math.random() * MAPA_ALTURA; }
       else if (edge === 2) { x = Math.random() * MAPA_LARGURA; y = 0; }
       else { x = Math.random() * MAPA_LARGURA; y = MAPA_ALTURA; }
+
       let tipo = 'normal', cor = 'red', vida = 1, speed = 1.2 + Math.random(), dano = 1;
-      if (dias >= 10 && Math.random() < 0.2) { tipo = 'rapido'; cor = '#ff9800'; speed = 2.5 + Math.random(); }
-      if (dias >= 25 && Math.random() < 0.15) { tipo = 'tanque'; cor = '#607d8b'; vida = 3; speed = 0.7 + Math.random()*0.5; dano = 2; }
-      if (dias >= 100 && Math.random() < 0.1) { tipo = 'fantasma'; cor = '#b39ddb'; vida = 2; speed = 1.7 + Math.random(); dano = 2; }
-      if (dias >= 200 && Math.random() < 0.07) { tipo = 'explosivo'; cor = '#fff176'; vida = 1; speed = 1.3 + Math.random(); dano = 3; }
-      enemies.push({ x, y, size: 36, speed, alive: true, mood: Math.random(), tipo, cor, vida, dano, explodindo: false });
+      if (dias >= 10 && Math.random() < 0.2) {
+        tipo = 'rapido'; cor = '#ff9800'; speed = 2.5 + Math.random();
+      }
+      if (dias >= 25 && Math.random() < 0.15) {
+        tipo = 'tanque'; cor = '#607d8b'; vida = 3; speed = 0.7 + Math.random()*0.5; dano = 2;
+      }
+      if (dias >= 100 && Math.random() < 0.1) {
+        tipo = 'fantasma'; cor = '#b39ddb'; vida = 2; speed = 1.7 + Math.random(); dano = 2;
+      }
+      if (dias >= 200 && Math.random() < 0.07) {
+        tipo = 'explosivo'; cor = '#fff176'; vida = 1; speed = 1.3 + Math.random(); dano = 3;
+      }
+
+      enemies.push({ x, y, size: 36, speed, dano, vida, alive: true, tipo, cor });
     }
-    
+
     function spawnMaterials() {
-      materials = [];
-      const spawnChance = isDay ? 0.05 : 0.02; // Gems são mais raras à noite
-      for (let i = 0; i < 12; i++) {
-        materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 32, type: 'madeira' });
-      }
-      for (let i = 0; i < 9; i++) {
-        materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 28, type: 'pedra' });
-        if(Math.random() < spawnChance) {
-          materials.push({ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 26, type: 'gema' });
-        }
-      }
-      if (florestaDesbloqueada) {
-        for (let i = 0; i < 20; i++) {
-          materials.push({
-            x: MAPA_LARGURA * 0.45 + Math.random() * (MAPA_LARGURA - MAPA_LARGURA * 0.45 - 160),
-            y: 60 + Math.random() * (MAPA_ALTURA - 120),
-            size: 36,
-            type: Math.random() < 0.85 ? 'madeira_floresta' : 'madeira'
-          });
-        }
-      }
-      apples = Math.random() < 0.6 ? [{ x: Math.random() * (MAPA_LARGURA-60), y: Math.random() * (MAPA_ALTURA-60), size: 24, collected: false }] : [];
+        if (materials.length > 50) return;
+        let x = Math.random() * MAPA_LARGURA;
+        let y = Math.random() * MAPA_ALTURA;
+        let type = Math.random() > 0.5 ? 'madeira' : 'pedra';
+        if (dias > 50 && Math.random() < 0.2) type = 'gema';
+        materials.push({ x, y, size: 20, type, collected: false });
     }
-    
-    function movePlayer() {
-      let vel = player.baseSpeed * player.speedModifier;
-      let moved = false;
-      if (florestaDesbloqueada && player.x > MAPA_LARGURA * 0.4) vel = player.baseSpeed * 0.55 * player.speedModifier;
-      if (keyboard['arrowup'] || keyboard['w']) { player.y -= vel; moved = true; }
-      if (keyboard['arrowdown'] || keyboard['s']) { player.y += vel; moved = true; }
-      if (keyboard['arrowleft'] || keyboard['a']) { player.x -= vel; moved = true; }
-      if (keyboard['arrowright'] || keyboard['d']) { player.x += vel; moved = true; }
-      if (!montanhaLiberada && player.x > MAPA_LARGURA - 200) player.x = MAPA_LARGURA - 200;
-      if (player.x < 0) player.x = 0;
-      if (player.x > MAPA_LARGURA - player.size) player.x = MAPA_LARGURA - player.size;
-      if (player.y < 0) player.y = 0;
-      if (player.y > MAPA_ALTURA - player.size) player.y = MAPA_ALTURA - player.size;
-      if (moved && Math.floor(performance.now() / 150) % 2 === 0) playSound('step');
-      return moved;
+
+    function spawnApples() {
+        if (apples.length > 10) return;
+        let x = Math.random() * MAPA_LARGURA;
+        let y = Math.random() * MAPA_ALTURA;
+        apples.push({ x, y, size: 16 });
     }
-    
-    function updateCamera() {
-      // Ajuste imediato da câmera para o centro do jogador
-      camera.x = player.x + player.size / 2 - W() / (2 * CAMERA_ZOOM);
-      camera.y = player.y + player.size / 2 - H() / (2 * CAMERA_ZOOM);
-      
-      const visibleWidth = W() / CAMERA_ZOOM;
-      const visibleHeight = H() / CAMERA_ZOOM;
-      
-      camera.x = Math.max(0, Math.min(MAPA_LARGURA - visibleWidth, camera.x));
-      camera.y = Math.max(0, Math.min(MAPA_ALTURA - visibleHeight, camera.y));
-    }
-    
-    function moveEnemies() {
-      for (let e of enemies) {
-        if (!e.alive) continue;
-        let blocked = false;
-        if (e.tipo !== 'fantasma') {
-          for (let b of buildings) {
-            if (e.x < b.x + b.size && e.x + e.size > b.x && e.y < b.y + b.size && e.y + e.size > b.y) { blocked = true; break; }
-          }
-        }
-        if (blocked) continue;
-        const dx = player.x - e.x;
-        const dy = player.y - e.y;
-        const dist = Math.hypot(dx, dy) || 1;
-        e.x += (dx / dist) * e.speed;
-        e.y += (dy / dist) * e.speed;
-      }
-    }
-    
-    function checkCollision() {
-      for (let m of materials) {
-        if (m.x < 0) continue;
-        if (player.x < m.x + m.size && player.x + player.size > m.x && player.y < m.y + m.size && player.y + m.size > m.y) {
-          playSound('collect');
-          if (m.type === 'madeira') inventory.madeira++;
-          if (m.type === 'pedra') inventory.pedra++;
-          if (m.type === 'madeira_floresta') inventory.madeira_floresta++;
-          if (m.type === 'gema') inventory.gema++;
-          m.x = -100;
-          updateInventory();
-        }
-      }
-      for (let a of apples) {
-        if (a.collected) continue;
-        if (player.x < a.x + a.size && player.x + player.size > a.x && player.y < a.y + a.size && player.y + a.size > a.y) {
-          playSound('collect');
-          inventory.maca++; a.collected = true; updateInventory();
-        }
-      }
-      for (let e of enemies) {
-        if (!e.alive) continue;
-        if (player.x < e.x + e.size && player.x + player.size > e.x && player.y < e.y + e.size && player.y + player.size > e.y) {
-          if (player.invencivel > 0) continue;
-          playSound('damage');
-          if (e.tipo === 'explosivo' && !e.explodindo) {
-            e.explodindo = true;
-            setTimeout(()=>{
-              if (!running) return;
-              playSound('explosion');
-              player.vida -= e.dano*player.defenseModifier;
-              updateVida();
-              e.alive = false;
-              if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
-            }, 300);
-          } else {
-            let damage = e.dano * player.defenseModifier;
-            if (inventory.armadura) damage *= 0.5;
-            player.vida -= damage;
-            player.invencivel = 40;
-            updateVida();
-            if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
-          }
-        }
-      }
-    }
-    
+
     function drawBackground(now) {
-      ctx.save();
-      const t = (now / 2000) % 1;
-      const grad = ctx.createLinearGradient(0, 0, W(), H());
-      grad.addColorStop(0, isDay ? "#b6e07a" : "#2b3c5e");
-      grad.addColorStop(0.5 + t / 2, isDay ? "#6bbf3c" : "#1a1e3e");
-      grad.addColorStop(1, isDay ? "#a2e0e6" : "#223c16");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W(), H());
-      for (const p of particles) {
-        ctx.globalAlpha = 1;
+      if (backgroundSelect.value === 'dynamic') {
+        const timeOfDay = now % (dayLength * 1000) / (dayLength * 1000); // 0 a 1
+        let r, g, b;
+        if (timeOfDay < 0.5) { // Dia
+            const dayProgress = timeOfDay / 0.5;
+            r = 43 + (100 - 43) * dayProgress;
+            g = 88 + (150 - 88) * dayProgress;
+            b = 118 + (255 - 118) * dayProgress;
+            ctx.fillStyle = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+            ctx.fillRect(0, 0, W(), H());
+            isDay = true;
+        } else { // Noite
+            const nightProgress = (timeOfDay - 0.5) / 0.5;
+            r = 143 - (143 - 20) * nightProgress;
+            g = 150 - (150 - 20) * nightProgress;
+            b = 255 - (255 - 40) * nightProgress;
+            ctx.fillStyle = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+            ctx.fillRect(0, 0, W(), H());
+            isDay = false;
+        }
+      } else {
+        ctx.fillStyle = '#1c223c';
+        ctx.fillRect(0, 0, W(), H());
+        isDay = false;
+      }
+    }
+
+    function drawWorld(now) {
+      // Background
+      drawBackground(now);
+
+      // Partículas
+      ctx.globalAlpha = 1;
+      particles.forEach(p => {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.fill();
         p.x += p.dx;
         p.y += p.dy;
-        if (p.x < -p.r) p.x = W() + p.r;
-        if (p.x > W() + p.r) p.x = -p.r;
-        if (p.y < -p.r) p.y = H() + p.r;
-        if (p.y > H() + p.r) p.y = -p.r;
-      }
-      ctx.restore();
-    }
-    
-    function drawWorld(now) {
-      if (!ctx) return;
-      
-      ctx.save();
-      ctx.fillStyle = '#6a6a6a';
-      ctx.fillRect(MAPA_LARGURA - 200, 0, 200, MAPA_ALTURA);
-      ctx.fillStyle = '#444';
-      ctx.fillRect(MAPA_LARGURA - 200, 0, 20, MAPA_ALTURA);
-      ctx.restore();
+        if (p.x > W()) p.x = 0; if (p.x < 0) p.x = W();
+        if (p.y > H()) p.y = 0; if (p.y < 0) p.y = H();
+      });
+
+      // Desenhar mapa
+      ctx.fillStyle = '#4CAF50';
+      ctx.fillRect(0, 0, MAPA_LARGURA, MAPA_ALTURA);
+      ctx.fillStyle = '#5c3a21';
+      ctx.fillRect(0, 0, 100, MAPA_ALTURA);
+      ctx.fillRect(MAPA_LARGURA-100, 0, 100, MAPA_ALTURA);
+      ctx.fillRect(0, 0, MAPA_LARGURA, 100);
+      ctx.fillRect(0, MAPA_ALTURA-100, MAPA_LARGURA, 100);
       
       if (florestaDesbloqueada) {
-        ctx.save();
-        ctx.fillStyle = '#006400';
-        ctx.fillRect(MAPA_LARGURA * 0.45, 0, MAPA_LARGURA * 0.55, MAPA_ALTURA);
-        ctx.restore();
+          ctx.fillStyle = '#388e3c';
+          ctx.fillRect(MAPA_LARGURA/2, 0, MAPA_LARGURA/2, MAPA_ALTURA);
       }
       
       if (montanhaLiberada) {
-        ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = "#b0bec5";
-        ctx.beginPath();
-        ctx.moveTo(MAPA_LARGURA-200, MAPA_ALTURA);
-        ctx.lineTo(MAPA_LARGURA-100, MAPA_ALTURA/2);
-        ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA/2+100);
-        ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.restore();
-        ctx.save();
-        ctx.fillStyle = "#fff";
-        ctx.globalAlpha = 0.3;
-        ctx.beginPath();
-        ctx.moveTo(MAPA_LARGURA-100, MAPA_ALTURA/2);
-        ctx.lineTo(MAPA_LARGURA-60, MAPA_ALTURA/2+40);
-        ctx.lineTo(MAPA_LARGURA-20, MAPA_ALTURA/2+20);
-        ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA/2+100);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-    
-      for (let m of materials) {
-        if (m.x < 0) continue;
-        if (m.type === 'madeira' || m.type === 'madeira_floresta') {
-          ctx.save();
-          ctx.shadowColor = "#5a2d0c";
-          ctx.shadowBlur = 10;
-          ctx.fillStyle = m.type === 'madeira' ? "#8B4513" : "#6A4E1A";
+          ctx.fillStyle = '#757575';
           ctx.beginPath();
-          ctx.arc(m.x+m.size/2, m.y+m.size/2, m.size/2, 0, 2*Math.PI);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#deb887";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(m.x+m.size/2, m.y+m.size/2, m.size/4, 0, 2*Math.PI);
-          ctx.stroke();
-          ctx.fillStyle = m.type === 'madeira' ? "#4caf50" : "#2e7d32";
-          ctx.beginPath();
-          ctx.arc(m.x+m.size/2+8, m.y+m.size/2-10, 7, 0, 2*Math.PI);
-          ctx.fill();
-          ctx.restore();
-        } else if (m.type === 'pedra') {
-          ctx.save();
-          ctx.shadowColor = "#fff";
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = "#bbb";
-          ctx.beginPath();
-          ctx.ellipse(m.x+m.size/2, m.y+m.size/2, m.size/2, m.size/2.5, 0.3, 0, 2*Math.PI);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = "#fff8";
-          ctx.beginPath();
-          ctx.arc(m.x+m.size/2+5, m.y+m.size/2-5, 5, 0, 2*Math.PI);
-          ctx.fill();
-          ctx.restore();
-        } else if (m.type === 'gema') {
-          ctx.save();
-          ctx.shadowColor = "#00e";
-          ctx.shadowBlur = 16;
-          ctx.fillStyle = "#00e6ff";
-          ctx.beginPath();
-          ctx.moveTo(m.x+m.size/2, m.y);
-          ctx.lineTo(m.x+m.size, m.y+m.size/2);
-          ctx.lineTo(m.x+m.size/2, m.y+m.size);
-          ctx.lineTo(m.x, m.y+m.size/2);
+          ctx.moveTo(MAPA_LARGURA/2, MAPA_ALTURA/2);
+          ctx.lineTo(MAPA_LARGURA/2, MAPA_ALTURA);
+          ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA);
+          ctx.lineTo(MAPA_LARGURA, MAPA_ALTURA/2);
           ctx.closePath();
           ctx.fill();
-          ctx.restore();
-        }
-      }
-    
-      for (let a of apples) {
-        if (a.collected) continue;
-        ctx.save();
-        ctx.shadowColor = "#f00";
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = "#e53935";
-        ctx.beginPath();
-        ctx.arc(a.x+a.size/2, a.y+a.size/2, a.size/2, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff8";
-        ctx.beginPath();
-        ctx.arc(a.x+a.size/2+3, a.y+a.size/2-5, 4, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.strokeStyle = "#795548";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(a.x+a.size/2, a.y+a.size/2-8);
-        ctx.lineTo(a.x+a.size/2, a.y+a.size/2-14);
-        ctx.stroke();
-        ctx.restore();
-      }
-    
-      for (let b of buildings) {
-        if (b.type === 'parede_madeira') {
-          ctx.save();
-          ctx.shadowColor = "#deb887";
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = "#deb887";
-          ctx.strokeStyle = "#8B4513";
-          ctx.lineWidth = 3;
-          ctx.fillRect(b.x, b.y, b.size, b.size);
-          ctx.strokeRect(b.x, b.y, b.size, b.size);
-          ctx.beginPath();
-          ctx.moveTo(b.x+8, b.y+b.size-8); ctx.lineTo(b.x+b.size-8, b.y+8);
-          ctx.stroke();
-          ctx.restore();
-        } else if (b.type === 'parede_pedra') {
-          ctx.save();
-          ctx.shadowColor = "#555";
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = "#607d8b";
-          ctx.strokeStyle = "#455a64";
-          ctx.lineWidth = 3;
-          ctx.fillRect(b.x, b.y, b.size, b.size);
-          ctx.strokeRect(b.x, b.y, b.size, b.size);
-          ctx.beginPath();
-          ctx.moveTo(b.x+8, b.y+8); ctx.lineTo(b.x+b.size-8, b.y+8);
-          ctx.lineTo(b.x+b.size-8, b.y+b.size-8);
-          ctx.lineTo(b.x+8, b.y+b.size-8);
-          ctx.closePath();
-          ctx.stroke();
-          ctx.restore();
-        } else if (b.type === 'armadilha') {
-          ctx.save();
-          ctx.shadowColor = "#555";
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = "#555";
-          ctx.strokeStyle = "#333";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(b.x+b.size/2, b.y+b.size/2, b.size/2, 0, 2*Math.PI);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+b.size,b.y+b.size);
-          ctx.moveTo(b.x+b.size,b.y); ctx.lineTo(b.x,b.y+b.size);
-          ctx.stroke();
-          ctx.restore();
-        } else if (b.type === 'fogueira') {
-            ctx.save();
-            ctx.shadowColor = "#ff5722";
-            ctx.shadowBlur = 12;
-            ctx.fillStyle = '#ff5722';
-            ctx.beginPath();
-            ctx.moveTo(b.x+15,b.y+b.size);
-            ctx.lineTo(b.x+25,b.y+b.size);
-            ctx.lineTo(b.x+20, b.y+b.size-20);
-            ctx.fill();
-            ctx.fillStyle = '#ff9800';
-            ctx.beginPath();
-            ctx.moveTo(b.x+18,b.y+b.size-5);
-            ctx.lineTo(b.x+28,b.y+b.size-5);
-            ctx.lineTo(b.x+23,b.y+b.size-25);
-            ctx.fill();
-            ctx.restore();
-        }
-      }
-    
-      for (let t of torches) {
-        ctx.save();
-        ctx.shadowColor = "#ff0";
-        ctx.shadowBlur = 24;
-        ctx.fillStyle = "#ff0";
-        ctx.beginPath();
-        ctx.arc(t.x+12, t.y+12, 12, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#b8860b";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(t.x+12, t.y+12);
-        ctx.lineTo(t.x+12, t.y+26);
-        ctx.stroke();
-        ctx.restore();
-      }
-    
-      for (let b of bombs) {
-        ctx.save();
-        ctx.fillStyle = '#222';
-        ctx.fillRect(b.x, b.y, b.size, b.size);
-        ctx.fillStyle = '#f33';
-        ctx.fillRect(b.x+6, b.y+6, b.size-12, 6);
-        ctx.restore();
       }
 
-      for (let a of arrows) {
-        ctx.save();
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(a.x, a.y, 10, 2);
-        ctx.fillStyle = '#fff';
+      // Itens
+      materials.forEach(m => {
+        ctx.fillStyle = m.type === 'madeira' ? 'brown' : m.type === 'pedra' ? 'grey' : m.type === 'gema' ? 'purple' : '#8B4513';
+        ctx.fillRect(m.x, m.y, m.size, m.size);
+      });
+      
+      apples.forEach(a => {
+        ctx.fillStyle = 'red';
         ctx.beginPath();
-        ctx.moveTo(a.x + 10, a.y - 5);
-        ctx.lineTo(a.x + 15, a.y);
-        ctx.lineTo(a.x + 10, a.y + 5);
+        ctx.arc(a.x + a.size/2, a.y + a.size/2, a.size/2, 0, Math.PI*2);
         ctx.fill();
-        ctx.restore();
-      }
-    
-      if (player) {
-          drawPlayerEntity(player);
-      }
-    
-      for (let e of enemies) {
-        if (!e.alive) continue;
-        ctx.save();
-        ctx.translate(e.x+e.size/2, e.y+e.size/2);
-        ctx.shadowColor = e.cor;
-        ctx.shadowBlur = 16;
+      });
+
+      // Inimigos
+      enemies.forEach(e => {
         ctx.fillStyle = e.cor;
         ctx.beginPath();
-        ctx.arc(0, 0, e.size/2, 0, 2*Math.PI);
+        ctx.arc(e.x + e.size/2, e.y + e.size/2, e.size/2, 0, Math.PI*2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff";
+        if (e.tipo === 'fantasma') {
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('👻', e.x + e.size/2, e.y + e.size/2);
+        }
+      });
+      
+      // Bombas
+      bombs.forEach(b => {
+        ctx.fillStyle = b.timer > 30 ? 'black' : 'red';
+        ctx.fillRect(b.x, b.y, b.size, b.size);
+      });
+      
+      // Flechas
+      arrows.forEach(a => {
+        ctx.fillStyle = 'black';
         ctx.beginPath();
-        ctx.ellipse(-7, -6, 5, 4, 0, 0, 2*Math.PI);
-        ctx.ellipse(7, -6, 5, 4, 0, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.fillStyle = "#900";
-        ctx.beginPath();
-        ctx.ellipse(-7, -6, 2, 2, 0, 0, 2*Math.PI);
-        ctx.ellipse(7, -6, 2, 2, 0, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.strokeStyle = "#900";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        if (e.tipo === 'tanque') ctx.arc(0, 15, 8, Math.PI, 2*Math.PI);
-        else if (e.tipo === 'rapido') ctx.arc(0, 7, 8, 0, Math.PI);
-        else if (e.tipo === 'explosivo') ctx.arc(0, 0, 12, 0, 2*Math.PI);
-        else ctx.arc(0, 7, 8, 0.2, Math.PI-0.2);
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(a.x + a.vx*1.5, a.y + a.vy*1.5);
         ctx.stroke();
+      });
+
+      // Construções
+      buildings.forEach(b => {
+        if (b.type === 'parede_madeira') {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(b.x, b.y, b.size, b.size);
+        } else if (b.type === 'parede_pedra') {
+            ctx.fillStyle = '#444';
+            ctx.fillRect(b.x, b.y, b.size, b.size);
+        } else if (b.type === 'fogueira') {
+            ctx.fillStyle = '#f00';
+            ctx.beginPath();
+            ctx.arc(b.x + b.size/2, b.y + b.size/2, b.size/2, 0, Math.PI*2);
+            ctx.fill();
+        } else if (b.type === 'armadilha') {
+            ctx.fillStyle = '#222';
+            ctx.fillRect(b.x, b.y, b.size, b.size);
+        }
+      });
+      
+      torches.forEach(t => {
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.arc(t.x + t.size/2, t.y + t.size/2, t.size/2, 0, Math.PI*2);
+        ctx.fill();
+      });
+      
+      // Desenhar outros jogadores
+      for (const id in otherPlayers) {
+        if (id === socket.id) continue;
+        const otherPlayer = otherPlayers[id];
+        ctx.save();
+        ctx.fillStyle = otherPlayer.color;
+        ctx.translate(otherPlayer.x, otherPlayer.y);
+        ctx.rotate(otherPlayer.angle);
+        ctx.fillRect(-otherPlayer.size/2, -otherPlayer.size/2, otherPlayer.size, otherPlayer.size);
         ctx.restore();
+        
+        // Nome do jogador
+        ctx.fillStyle = 'white';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(otherPlayer.name, otherPlayer.x, otherPlayer.y - otherPlayer.size/2 - 5);
       }
-      ctx.restore();
-    }
-    
-    function drawPlayerEntity(ent) {
-      if (!ctx || !ent) return;
+
+      // Desenhar Jogador
       ctx.save();
-      ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
-      ctx.shadowColor = ent.color;
-      ctx.shadowBlur = 18;
-      ctx.globalAlpha = ent.invencivel > 0 ? 0.5 : 1;
-      ctx.fillStyle = ent.color;
-      ctx.beginPath();
-      ctx.arc(0, 0, ent.size/2, 0, 2*Math.PI);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      if (ent.armadura) {
-        ctx.strokeStyle = "#b0c4de";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(0, 0, ent.size/2-2, Math.PI*0.15, Math.PI*0.85);
-        ctx.stroke();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+      
+      if (player.invencivel % 10 < 5) {
+        ctx.fillStyle = player.color;
+        ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+        if (inventory.armadura) {
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+        }
       }
-      let blink = Math.abs(Math.sin(Date.now()/600 + ent.x/50));
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.ellipse(-9, -7, 6, 5*blink, 0, 0, 2*Math.PI);
-      ctx.ellipse(9, -7, 6, 5*blink, 0, 0, 2*Math.PI);
-      ctx.fill();
-      ctx.fillStyle = "#222";
-      ctx.beginPath();
-      ctx.ellipse(-9, -7, 2, 2*blink, 0, 0, 2*Math.PI);
-      ctx.ellipse(9, -7, 2, 2*blink, 0, 0, 2*Math.PI);
-      ctx.fill();
-      ctx.strokeStyle = "#222";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 7, 10, 0.2, Math.PI-0.2);
-      ctx.stroke();
+      
       ctx.restore();
-    
-      if (ent.espada) {
-        ctx.save();
-        ctx.translate(ent.x+ent.size, ent.y+ent.size/2);
-        ctx.rotate(-0.2);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, -5, 22, 10);
-        ctx.strokeStyle = "#aaa";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(0, -5, 22, 10);
-        ctx.restore();
+
+      // Desenhar HUD
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (buildMode) {
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(mouseWorld.x, mouseWorld.y, 40, 40);
       }
-      if (ent.picareta) {
-        ctx.save();
-        ctx.translate(ent.x-10, ent.y+ent.size/2);
-        ctx.fillStyle = '#888';
-        ctx.fillRect(0, -4, 16, 8);
-        ctx.fillRect(7, -12, 5, 18);
-        ctx.restore();
-      }
-      if (ent.superpicareta) {
-        ctx.save();
-        ctx.translate(ent.x-18, ent.y+ent.size/2-18);
-        ctx.fillStyle = '#0ff';
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(0,0); ctx.lineTo(30,10); ctx.lineTo(10,30); ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-      if (ent.arco) {
-        ctx.save();
-        ctx.translate(ent.x+ent.size/2, ent.y+ent.size/2);
-        ctx.strokeStyle = '#a4a4a4';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(0, 0, 25, 0, Math.PI);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(-25, 0);
-        ctx.lineTo(25, 0);
-        ctx.stroke();
-        ctx.restore();
-      }
+      ctx.restore();
     }
     
     function gameLoop(now) {
-      if (!ctx) {
-        console.warn("Canvas context not initialized. Retrying...");
-        setTimeout(() => requestAnimationFrame(gameLoop), 100);
+      if (!running) return;
+      if (paused) {
+        requestAnimationFrame(gameLoop);
         return;
       }
+      
+      const lastNow = gameLoop.lastNow || now;
+      const delta = (now - lastNow) / 1000;
+      gameLoop.lastNow = now;
 
-      if (!startTime) startTime = now;
-      if (running && !paused) {
-        elapsed = (now - startTime) / 1000;
-        timerSpan.textContent = elapsed.toFixed(1);
-        dias = Math.floor(elapsed / (dayLength*2)) + 1;
-        if (dias !== lastDay) { lastDay = dias; }
-        diasSpan.textContent = "Dia " + dias;
-        if (!florestaDesbloqueada && dias >= 15) {
-          florestaDesbloqueada = true;
-          spawnMaterials();
-        }
-        if (!montanhaLiberada && dias >= 1000) montanhaLiberada = true;
-        isDay = Math.floor(elapsed / dayLength) % 2 === 0;
+      elapsed += delta;
+      
+      // Atualizar tempo e dias
+      timerSpan.textContent = elapsed.toFixed(1);
+      const newDias = Math.floor(elapsed / dayLength) + 1;
+      if (newDias > lastDay) {
+        lastDay = newDias;
+        dias = newDias;
+        diasSpan.textContent = `Dia ${dias}`;
+        spawnEnemy();
+        if (dias === 5) spawnApples();
+      }
+      
+      // Lógica de movimento e colisão
+      const speedX = (keyboard['d'] - keyboard['a']) * player.speed * player.speedModifier;
+      const speedY = (keyboard['s'] - keyboard['w']) * player.speed * player.speedModifier;
+      
+      player.x += speedX;
+      player.y += speedY;
+      
+      // Clamp player position
+      player.x = Math.max(0, Math.min(MAPA_LARGURA - player.size, player.x));
+      player.y = Math.max(0, Math.min(MAPA_ALTURA - player.size, player.y));
+      
+      if (speedX !== 0 || speedY !== 0) {
+        player.angle = Math.atan2(speedY, speedX);
+        socket.emit('playerMovement', { x: player.x, y: player.y, angle: player.angle });
+      }
 
-        if (player.effectTimer > 0) {
-            player.effectTimer -= 1/60;
-            if (player.effectTimer <= 0) {
-                player.speedModifier = 1;
-                player.defenseModifier = 1;
-                player.attackModifier = 1;
-            }
+      // Atualizar câmera
+      camera.x = player.x - W() / (2 * CAMERA_ZOOM);
+      camera.y = player.y - H() / (2 * CAMERA_ZOOM);
+      camera.x = Math.max(0, Math.min(MAPA_LARGURA - W()/CAMERA_ZOOM, camera.x));
+      camera.y = Math.max(0, Math.min(MAPA_ALTURA - H()/CAMERA_ZOOM, camera.y));
+      
+      // Lógica do jogo
+      if (player.effectTimer > 0) {
+        player.effectTimer -= delta;
+        if (player.effectTimer <= 0) {
+            player.speedModifier = 1;
+            player.defenseModifier = 1;
+            player.attackModifier = 1;
         }
+      }
+
+      // Colisão com inimigos
+      enemies.forEach(e => {
+        if (!e.alive) return;
+        const dx = player.x - e.x;
+        const dy = player.y - e.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < player.size/2 + e.size/2 && player.invencivel <= 0) {
+          player.vida -= e.dano * player.defenseModifier;
+          player.invencivel = 120;
+          playSound('damage');
+          updateVida();
+        }
+        if (player.vida <= 0) running = false;
         
-        movePlayer();
-        updateCamera();
-        moveEnemies();
-        checkCollision();
-        
-        for (let i = bombs.length-1; i >= 0; i--) {
-          const b = bombs[i];
-          b.timer -= (1000/60);
-          if (b.timer <= 0) {
-            playSound('explosion');
-            const ex = b.x + b.size/2, ey = b.y + b.size/2;
-            const r = 120;
-            for (let j = enemies.length-1; j >= 0; j--) {
-              const e = enemies[j];
-              if (!e.alive) continue;
-              if (Math.hypot(e.x+e.size/2-ex, e.y+e.size/2-ey) <= r) { e.alive = false; }
-            }
-            for (let j = materials.length-1; j >= 0; j--) {
-              const m = materials[j];
-              if (Math.hypot(m.x+m.size/2-ex, m.y+m.size/2-ey) <= r) m.x = -100;
-            }
-            for (let j = buildings.length-1; j >= 0; j--) {
-              const bld = buildings[j];
-              if (Math.hypot(bld.x+bld.size/2-ex, bld.y+bld.size/2-ey) <= r) buildings.splice(j,1);
-            }
-            if (Math.hypot(player.x+player.size/2-ex, player.y+player.size/2-ey) <= r) {
-              player.vida -= 2 * player.defenseModifier; updateVida();
-              if (player.vida <= 0) { running = false; restartBtn.style.display = 'inline'; }
-            }
-            bombs.splice(i,1);
+        // Movimento dos inimigos
+        const angle = Math.atan2(player.y - e.y, player.x - e.x);
+        e.x += Math.cos(angle) * e.speed;
+        e.y += Math.sin(angle) * e.speed;
+      });
+
+      // Colisão de flechas com inimigos
+      arrows.forEach(a => {
+        a.x += a.vx;
+        a.y += a.vy;
+        for (let e of enemies) {
+          if (!e.alive) continue;
+          const dx = a.x - e.x;
+          const dy = a.y - e.y;
+          if (Math.hypot(dx, dy) < e.size/2) {
+            e.vida -= 1;
+            if (e.vida <= 0) e.alive = false;
+            a.alive = false;
           }
         }
+      });
+      arrows = arrows.filter(a => a.alive !== false);
 
-        for (let i = arrows.length - 1; i >= 0; i--) {
-            const arrow = arrows[i];
-            arrow.x += arrow.vx;
-            arrow.y += arrow.vy;
-            let hit = false;
-            for (let j = enemies.length - 1; j >= 0; j--) {
-                const enemy = enemies[j];
-                if (Math.hypot(arrow.x - enemy.x, arrow.y - enemy.y) < 20) {
-                    enemy.vida -= 1 * player.attackModifier;
-                    if (enemy.vida <= 0) {
-                        enemy.alive = false;
-                    }
-                    hit = true;
-                    break;
-                }
-            }
-            if (hit || arrow.x < -100 || arrow.x > MAPA_LARGURA + 100 || arrow.y < -100 || arrow.y > MAPA_ALTURA + 100) {
-                arrows.splice(i, 1);
-            }
+      // Colisão com materiais
+      materials.forEach(m => {
+        const dx = player.x - m.x;
+        const dy = player.y - m.y;
+        if (Math.hypot(dx,dy) < player.size/2 + m.size/2) {
+          if (m.type === 'madeira') inventory.madeira++;
+          else if (m.type === 'pedra') inventory.pedra++;
+          else if (m.type === 'gema') inventory.gema++;
+          m.x = -100;
+          playSound('collect');
+          updateInventory();
         }
+      });
+      materials = materials.filter(m => m.x > -100);
+      
+      // Colisão com maçãs
+      apples.forEach(a => {
+        const dx = player.x - a.x;
+        const dy = player.y - a.y;
+        if (Math.hypot(dx, dy) < player.size/2 + a.size/2) {
+          inventory.maca++;
+          a.x = -100;
+          playSound('collect');
+          updateInventory();
+        }
+      });
+      apples = apples.filter(a => a.x > -100);
+
+      // Lógica de armadilhas e minas
+      buildings.forEach(b => {
+        if (b.type === 'armadilha') {
+          enemies.forEach(e => {
+            if (!e.alive) return;
+            const dx = b.x - e.x;
+            const dy = b.y - e.y;
+            if (Math.hypot(dx,dy) < b.size/2 + e.size/2) {
+              e.speed = 0.5;
+            } else {
+              if (e.tipo === 'rapido') e.speed = 2.5; else e.speed = 1.2;
+            }
+          });
+        }
+      });
+      
+      bombs.forEach(b => {
+        b.timer -= 1;
+        if (b.timer <= 0) {
+          playSound('explosion');
+          enemies.forEach(e => {
+            const dx = b.x - e.x;
+            const dy = b.y - e.y;
+            const dist = Math.hypot(dx,dy);
+            if (dist < 100) e.vida -= 5;
+            if (e.vida <= 0) e.alive = false;
+          });
+          b.timer = -100;
+        }
+      });
+      bombs = bombs.filter(b => b.timer > -100);
+
+      // Desenhar
+      ctx.clearRect(0, 0, W(), H());
+      ctx.save();
+      ctx.translate(-camera.x, -camera.y);
+      drawWorld(now);
+      ctx.restore();
     
-        drawBackground(now);
-        
-        ctx.save();
-        ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
-        ctx.translate(-camera.x, -camera.y);
-        drawWorld(now);
-        ctx.restore();
+      if (player.invencivel > 0) player.invencivel--;
+      if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
+      if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
     
-        if (player.invencivel > 0) player.invencivel--;
-        if (!isDay && Math.floor(elapsed * 10) % 15 === 0 && enemies.length < Math.floor(elapsed / 2) + 2) spawnEnemy();
-        if (Math.floor(elapsed) % 14 === 0 && Math.floor(elapsed) !== 0 && Math.floor(elapsed * 10) % 10 === 0) spawnMaterials();
-    
-        requestAnimationFrame(gameLoop);
-      } else if (!running) {
-        timerSpan.textContent = elapsed.toFixed(1);
-        ctx.save();
-        ctx.globalAlpha = 0.85;
-        ctx.fillStyle = '#222b';
-        ctx.fillRect(W()/2-180, H()/2-80, 360, 160);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = 'white';
-        ctx.font = '38px Arial';
-        ctx.textAlign = "center";
-        ctx.fillText('Game Over!', W()/2, H()/2-10);
-        ctx.font = '24px Arial';
-        ctx.fillText('Tempo: ' + elapsed.toFixed(1) + ' s', W()/2, H()/2+30);
-        ctx.restore();
-        if (currentMusic) { currentMusic.pause(); }
-      }
-      if (paused) {
-        drawBackground(now);
-        ctx.save();
-        ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
-        ctx.translate(-camera.x, -camera.y);
-        drawWorld(now);
-        ctx.restore();
-        requestAnimationFrame(gameLoop);
-      }
+      requestAnimationFrame(gameLoop);
     }
 
-    window.onload = () => { 
-      gameContainer.style.display = 'none';
-      startMenu.style.display = 'flex';
-      initCanvas();
-    };
-    restartBtn.onclick = resetGame;
+    // Multiplayer
+    socket.on('connect', () => {
+        console.log('Conectado ao servidor.');
+    });
+
+    socket.on('currentPlayers', (playersData) => {
+        for (let id in playersData) {
+            if (id === socket.id) {
+                player.id = id;
+            } else {
+                otherPlayers[id] = playersData[id];
+            }
+        }
+    });
+
+    socket.on('newPlayer', (playerData) => {
+        otherPlayers[playerData.id] = playerData;
+    });
+
+    socket.on('playerDisconnected', (playerId) => {
+        delete otherPlayers[playerId];
+    });
+
+    socket.on('playerState', (playerData) => {
+        if (otherPlayers[playerData.id]) {
+            otherPlayers[playerData.id] = playerData;
+        }
+    });
+
   </script>
 </body>
 </html>
