@@ -43,10 +43,6 @@ io.on('connection', (socket) => {
 });
 
 setInterval(() => {
-    // CORREÇÃO: O evento agora se chama 'state' para o cliente receber o estado completo.
-    io.emit('state', players);
-}, 50); // Envia o estado a cada 50ms (20 vezes por segundo)
-
-server.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+    // CORREÇÃO: O evento agora se chama 'allPlayersState', para diferenciar do 'playerState' de um único jogador.
+    io.emit('allPlayersState', players);
+}, 1000 / 60); // 60 FPS
